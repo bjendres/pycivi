@@ -97,20 +97,33 @@ class CiviCRM:
 			return None
 
 
-	def getOrCreate(self, entity_type, attributes):
-		query = dict(attributes)
+	def createOrUpdate(self, entity_type, attributes, update_type='update', primary_attributes=[u'id', u'external_identifier']):
+		query = dict()
+		for key in primary_attributes: 
+			if attributes.has_key(key):
+				query[key] = attributes[key]
 		query['entity'] = entity_type
 		query['action'] = 'get'
 		result = self.performAPICall(query)
 
 		if result['count']>1:
 			raise CiviAPIException("Query result not unique, please provide a unique query for 'getOrCreate'.")
-		elif result['count']==1:
-			return self._createEntity(entity_type, result['values'][0])
 		else:
-			query['action'] = 'create'
-			result = self.performAPICall(query)
-			return self._createEntity(entity_type, result['values'][0])
+			if result['count']==1:
+				entity = self._createEntity(entity_type, result['values'][0])
+				if update_type=='update':
+					entity.update(attributes, True)
+				elif update_type=='fill':
+					entity.fill(attributes, True)
+				elif update_type=='replace':
+					entity.replace(attributes, True)
+				else:
+					raise CiviAPIException("Bad update_type '%s' selected. Must be 'update', 'fill' or 'replace'." % update_type)
+				return entity
+			else:
+				query['action'] = 'create'
+				result = self.performAPICall(query)
+				return self._createEntity(entity_type, result['values'][0])
 
 
 	def _createEntity(self, entity_type, attributes):

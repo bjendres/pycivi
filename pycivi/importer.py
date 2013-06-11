@@ -1,6 +1,7 @@
 import CiviCRM, entity_type
 import csv
 import codecs
+import threading
 
 class UTF8Recoder:
     """
@@ -58,17 +59,80 @@ class CSVRecordSource:
 				field = self.header[i]
 				if field in self.mapping:
 					field = self.mapping[field]
-				record[field] = row[i]
+				if field!=None:
+					record[field] = row[i]
 			return record
 
 
 
 
-def import_base(civicrm, entity_type, record_source):
-	for record in record_source:
-		record['contact_type'] = u'Organization'
-		entity = civicrm.getOrCreate(entity_type, record)
-		print "Written:", entity
-		#print record
+def import_base(civicrm, entity_type, record_source, workers=1):
+	if workers==1:
+		for record in record_source:
+			_import_base(civicrm, entity_type, [record], None)
+	else:
+		# multithreaded
+		record_list = list()
+		record_list_lock = threading.Condition()
+		thread_list = list()
+
+		# first fill the queue
+		record_source_iterator = record_source.__iter__()
+		for i in range(5 * workers):
+			try:
+				record_list.append(record_source_iterator.next())
+			except:
+				break
+
+		# then start the threads
+		class Worker(threading.Thread):
+			def __init__(self, civicrm, entity_type, record_list, record_list_lock):
+				threading.Thread.__init__(self)
+				self.civicrm = civicrm
+				self.entity_type = entity_type
+				self.record_list = record_list
+				self.record_list_lock = record_list_lock
+				self.start()
+
+			def run(self):
+				_import_base(self.civicrm, self.entity_type, self.record_list, self.record_list_lock)
+
+		for i in range(workers):
+			thread_list.append(Worker(civicrm, entity_type, record_list, record_list_lock))
+
+		# finally, feed the queue
+		remaining_records = True
+		while remaining_records:
+			record_list_lock.acquire()
+			record_list_lock.wait()
+			try:
+				record_list.append(record_source_iterator.next())
+			except:
+				remaining_records = False
+			record_list_lock.release()
+		
+		for worker in thread_list:
+			worker.join()
+		print "Done"
+		
+def _import_base(civicrm, entity_type, record_list, record_list_lock):
+	active = True
+	while active:
+		if record_list_lock:
+			record_list_lock.acquire()
+		
+		if len(record_list)>0:
+			record = record_list.pop(0)
+		else:
+			active = False
+
+		if record_list_lock:
+			record_list_lock.notifyAll()
+			record_list_lock.release()
+
+		if record:
+			record['contact_type'] = u'Organization'
+			entity = civicrm.createOrUpdate(entity_type, record, 'update')
+			print "Written:", entity
 
 

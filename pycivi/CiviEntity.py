@@ -15,32 +15,48 @@ class CiviEntity:
 	def getInt(self, attribute_key):
 		return int(self.attributes.get(attribute_key, -1))
 
+	def _storeChanges(self, changed_attributes):
+		if changed_attributes:
+			request = dict(changed_attributes)
+			request['action'] = 'create'
+			request['entity'] = self.entity_type
+			request['id'] = self.attributes['id']
+			self.civicrm.performAPICall(request)
+
 	# update all provided attributes.
-	def update(self, attributes):
-		changed = False
+	def update(self, attributes, store=False):
+		changed = dict()
 		for key in attributes.keys():
-			changed |= (self.attributes.get(key, None)!=attributes[key])
-			self.attributes[key] = attributes[key]
+			if (self.attributes.get(key, None)!=attributes[key]):
+				self.attributes[key] = attributes[key]
+				changed[key] = self.attributes[key]
+		if store:
+			self._storeChanges(changed)
 		return changed
 
 
 	# fill all provided attributes, i.e. do not overwrite any data, only set the ones that hadn't been set before
-	def fill(self, attributes):
-		changed = False
+	def fill(self, attributes, store=False):
+		changed = dict()
 		for key in attributes.keys():
 			if not self.attributes.has_key(key):
-				changed = True
 				self.attributes[key] = attributes[key]
+				changed[key] = self.attributes[key]
+		if store:
+			self._storeChanges(changed)
 		return changed
 
 
 	# update all provided attributes, but don't add the ones that were not there
-	def replace(self, attributes):
-		changed = False
+	def replace(self, attributes, store=False):
+		changed = dict()
 		for key in attributes.keys():
 			if self.attributes.has_key(key):
-				changed |= (self.attributes[key]!=attributes[key])
-				self.attributes[key] = attributes[key]
+				if (self.attributes[key]!=attributes[key]):
+					self.attributes[key] = attributes[key]
+					changed[key] = self.attributes[key]
+		if store:
+			self._storeChanges(changed)
 		return changed
 
 
@@ -49,7 +65,7 @@ class CiviEntity:
 		result = civi.performAPICall({'entity':self.entity_type, 'action':'get', 'id':self.attributes['id']})
 		self.attributes = result['values'][0]
 
-	
+
 	def store(self, civi=None):
 		if civi==None: civi = self.civicrm
 		result = civi.performAPICall({'entity':self.entity_type, 'action':'get', 'id':self.attributes['id']})
