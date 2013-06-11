@@ -66,73 +66,120 @@ class CSVRecordSource:
 
 
 
-def import_base(civicrm, entity_type, record_source, workers=1):
-	if workers==1:
-		for record in record_source:
-			_import_base(civicrm, entity_type, [record], None)
-	else:
-		# multithreaded
-		record_list = list()
-		record_list_lock = threading.Condition()
-		thread_list = list()
 
-		# first fill the queue
-		record_source_iterator = record_source.__iter__()
-		for i in range(5 * workers):
-			try:
-				record_list.append(record_source_iterator.next())
-			except:
+def import_contact_base(civicrm, record_source, parameters):
+	"""
+	Imports very basic contact data, using the records' 'external_identifier' or 'id'
+	as identification.
+
+	parameters['update_mode'] can be set to anything CiviCRM.createOrUpdate accepts
+	"""
+	entity_type = parameters.get('entity_type', 'Contact')
+	update_mode = parameters.get('update_mode', 'update')
+	for record in record_source:
+		entity = civicrm.createOrUpdate(entity_type, record, update_mode)
+		print "Written:", entity
+
+
+def import_contact_tags(civicrm, record_source, parameters):
+	"""
+
+	"""
+	entity_type = parameters.get('entity_type', 'Contact')
+	key_fields = parameters.get('key_fields', ['id', 'external_identifier'])
+
+	for record in record_source:
+		tag_ids = parameters.get('tag_ids', None)
+		if tag_ids==None:	# GET THE TAG IDS!
+			parameters_lock = parameters['lock']
+			parameters_lock.acquire()
+			# test again, maybe another thread already created them...
+			tag_ids = parameters.get('tag_ids', None)
+			if tag_ids==None:
+				# no? ok, then it's up to us to query the tag ids
+				tag_ids = dict()
+				for tag_name in record.keys():
+					tag_id = civicrm.getOrCreateTagID(tag_name)
+					tag_ids[tag_name] = tag_id
+					print "Mapped tag '%s' to #%s" % (tag_name, tag_id)
+				parameters['tag_ids'] = tag_ids
+			parameters_lock.notifyAll()
+			parameters_lock.release()
+
+		for main_key in key_fields:
+			record_id = record.get(main_key, None)
+			if record_id != None:
 				break
 
-		# then start the threads
-		class Worker(threading.Thread):
-			def __init__(self, civicrm, entity_type, record_list, record_list_lock):
-				threading.Thread.__init__(self)
-				self.civicrm = civicrm
-				self.entity_type = entity_type
-				self.record_list = record_list
-				self.record_list_lock = record_list_lock
-				self.start()
+		for tag_name in record.keys():
+			if not (tag_name in key_fields):
+				civicrm.tagContact(record_id, tag_ids[tag_name], bool(record[tag_name]))
 
-			def run(self):
-				_import_base(self.civicrm, self.entity_type, self.record_list, self.record_list_lock)
 
-		for i in range(workers):
-			thread_list.append(Worker(civicrm, entity_type, record_list, record_list_lock))
 
-		# finally, feed the queue
-		remaining_records = True
-		while remaining_records:
-			record_list_lock.acquire()
-			record_list_lock.wait()
-			try:
-				record_list.append(record_source_iterator.next())
-			except:
-				remaining_records = False
-			record_list_lock.release()
-		
-		for worker in thread_list:
-			worker.join()
-		print "Done"
-		
-def _import_base(civicrm, entity_type, record_list, record_list_lock):
-	active = True
-	while active:
-		if record_list_lock:
-			record_list_lock.acquire()
-		
-		if len(record_list)>0:
-			record = record_list.pop(0)
-		else:
-			active = False
 
-		if record_list_lock:
-			record_list_lock.notifyAll()
-			record_list_lock.release()
+def parallelize(civicrm, import_function, workers, record_source, parameters=dict()):
+	# multithreaded
+	record_list = list()
+	record_list_lock = threading.Condition()
+	thread_list = list()
+	parameters['lock'] = threading.Condition()
 
-		if record:
-			record['contact_type'] = u'Organization'
-			entity = civicrm.createOrUpdate(entity_type, record, 'update')
-			print "Written:", entity
+	# first fill the queue
+	record_source_iterator = record_source.__iter__()
+	for i in range(5 * workers):
+		try:
+			record_list.append(record_source_iterator.next())
+		except:
+			break
+
+	# then start the threads
+	class Worker(threading.Thread):
+		#def __init__(self, civicrm, entity_type, record_list, record_list_lock):
+		def __init__(self, function, civicrm, parameters, record_list, record_list_lock):
+			threading.Thread.__init__(self)
+			self.civicrm = civicrm
+			self.parameters = parameters
+			self.function = function
+			self.record_list = record_list
+			self.record_list_lock = record_list_lock
+			self.start()
+
+		def run(self):
+			active = True
+			while active:
+				if record_list_lock:
+					record_list_lock.acquire()
+				
+				if len(record_list)>0:
+					record = record_list.pop(0)
+				else:
+					active = False
+
+				if record_list_lock:
+					record_list_lock.notifyAll()
+					record_list_lock.release()
+
+				if record:
+					# execute standard function
+					self.function(self.civicrm, [record], self.parameters)			
+
+	for i in range(workers):
+		thread_list.append(Worker(import_function, civicrm, parameters, record_list, record_list_lock))
+
+	# finally, feed the queue
+	remaining_records = True
+	while remaining_records:
+		record_list_lock.acquire()
+		record_list_lock.wait()
+		try:
+			record_list.append(record_source_iterator.next())
+		except:
+			remaining_records = False
+		record_list_lock.release()
+	
+	for worker in thread_list:
+		worker.join()
+	print "Done"
 
 

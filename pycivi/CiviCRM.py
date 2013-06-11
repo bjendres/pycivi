@@ -96,6 +96,42 @@ class CiviCRM:
 		else:
 			return None
 
+	
+	def getOrCreateTagID(self, tag_name, description = None):
+		query = { 'entity': 'Tag',
+				  'action': 'get',
+				  'name' : tag_name}
+		result = self.performAPICall(query)
+		if result['count']>1:
+			raise CiviAPIException("Tag name query result not unique, this should not happen!")
+		elif result['count']==1:
+			return result['values'][0]['id']
+		else:
+			# tag doesn't exist => create
+			query['action'] = 'create'
+			if description:
+				query['description'] = description
+			result = self.performAPICall(query)
+			return result['values'][0]['id']
+
+
+	def tagContact(self, entity_id, tag_id, value=True):
+		query = { 'entity': 'EntityTag',
+				  'contact_id' : entity_id,
+				  'tag_id' : tag_id,
+				  }
+		if value:
+			query['action'] = 'create'
+		else:
+			query['action'] = 'delete'
+		result = self.performAPICall(query)
+		if result.get('added', False):
+			print "Added new tag#%s to contact#%s" % (tag_id, entity_id)
+		elif result.get('removed', False):
+			print "Removed tag#%s from contact#%s" % (tag_id, entity_id)
+		else:
+			print "No tags changed for contact#%s" % entity_id
+
 
 	def createOrUpdate(self, entity_type, attributes, update_type='update', primary_attributes=[u'id', u'external_identifier']):
 		query = dict()
