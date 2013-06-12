@@ -89,6 +89,11 @@ def import_contact_tags(civicrm, record_source, parameters):
 	key_fields = parameters.get('key_fields', ['id', 'external_identifier'])
 
 	for record in record_source:
+		contact_id = civicrm.getContactID(record)
+		if not contact_id:
+			print "Contact not found!"
+			continue
+
 		tag_ids = parameters.get('tag_ids', None)
 		if tag_ids==None:	# GET THE TAG IDS!
 			parameters_lock = parameters['lock']
@@ -106,14 +111,10 @@ def import_contact_tags(civicrm, record_source, parameters):
 			parameters_lock.notifyAll()
 			parameters_lock.release()
 
-		for main_key in key_fields:
-			record_id = record.get(main_key, None)
-			if record_id != None:
-				break
-
 		for tag_name in record.keys():
 			if not (tag_name in key_fields):
-				civicrm.tagContact(record_id, tag_ids[tag_name], bool(record[tag_name]))
+				setTag = (record[tag_name].lower() in ['true', 1, '1', 'x', 'yes', 'y', 'ja', 'j'])
+				civicrm.tagContact(contact_id, tag_ids[tag_name], setTag)
 
 
 

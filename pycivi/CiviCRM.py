@@ -40,6 +40,14 @@ class CiviCRM:
 				self.rest_url = self.url + '/sites/all/modules/civicrm/extern/rest.php'
 
 
+	def log(self, type, command, entity_type, first_id, second_id, duration, message):
+		"""
+		formally log information.
+		"""
+		# also add timestamp and thread id
+		pass
+
+
 
 	def performAPICall(self, params=dict()):
 		timestamp = time.time()
@@ -125,12 +133,37 @@ class CiviCRM:
 		else:
 			query['action'] = 'delete'
 		result = self.performAPICall(query)
-		if result.get('added', False):
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+		elif result.get('added', False):
 			print "Added new tag#%s to contact#%s" % (tag_id, entity_id)
 		elif result.get('removed', False):
 			print "Removed tag#%s from contact#%s" % (tag_id, entity_id)
 		else:
 			print "No tags changed for contact#%s" % entity_id
+
+
+	def getContactID(self, attributes, primary_attributes=['external_identifier']):
+		if attributes.has_key('id'):
+			return attributes['id']
+		elif attributes.has_key('contact_id'):
+			return attributes['contact_id']
+		
+		query = dict()
+		for key in primary_attributes: 
+			if attributes.has_key(key):
+				query[key] = attributes[key]
+		query['entity'] = 'Contact'
+		query['action'] = 'get'
+		query['return'] = 'contact_id'
+
+		result = self.performAPICall(query)
+		if result['count']>1:
+			raise CiviAPIException("Query result not unique, please provide a unique query for 'getOrCreate'.")
+		elif result['count']==1:
+			return result['values'][0]['contact_id']
+		else:
+			return 0
 
 
 	def createOrUpdate(self, entity_type, attributes, update_type='update', primary_attributes=[u'id', u'external_identifier']):
@@ -141,7 +174,6 @@ class CiviCRM:
 		query['entity'] = entity_type
 		query['action'] = 'get'
 		result = self.performAPICall(query)
-
 		if result['count']>1:
 			raise CiviAPIException("Query result not unique, please provide a unique query for 'getOrCreate'.")
 		else:
