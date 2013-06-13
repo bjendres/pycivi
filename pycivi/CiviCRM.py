@@ -4,6 +4,7 @@ import sys
 import json
 import entity_type as etype
 import time
+import threading
 
 from CiviEntity import *
 
@@ -12,17 +13,33 @@ class CiviAPIException(Exception):
 
 class CiviCRM:
 
-	def __init__(self, url, site_key, user_key):
+	def __init__(self, url, site_key, user_key, logfile=None):
 		# init some attributes
 		self.url = url
 		self.site_key = site_key
 		self.user_key = user_key
 
 		# set up logging
-		self.logger = logging.getLogger('pycivi')
-		self.logger.setLevel(logging.INFO)
-		self.logger.addHandler(logging.StreamHandler(sys.stdout))
+		self.logger_format = u"%(type)s;%(entity_type)s;%(first_id)s;%(second_id)s;%(duration)sms;%(thread_id)s;%(text)s"
+		self._logger = logging.getLogger('pycivi')
+		self._logger.setLevel(logging.DEBUG)
 
+		# add the console logger
+		logger1 = logging.StreamHandler()
+		logger1.setLevel(logging.INFO)
+		class MessageOnly(logging.Formatter):
+			def format(self, record):
+				return logging.Formatter.format(self, record).split(';')[-1]
+		logger1.setFormatter(MessageOnly())
+		self._logger.addHandler(logger1)
+
+		# add the file logger
+		if logfile:
+			logger2 = logging.FileHandler(logfile)
+			logger2.setLevel(logging.DEBUG)
+			logger2.setFormatter(logging.Formatter(u'%(asctime)s;%(message)s'))
+			self._logger.addHandler(logger2)
+		
 		# some more internal attributes
 		self.debug = False
 		self.api_version = 3
@@ -40,13 +57,21 @@ class CiviCRM:
 				self.rest_url = self.url + '/sites/all/modules/civicrm/extern/rest.php'
 
 
-	def log(self, type, command, entity_type, first_id, second_id, duration, message):
+
+	def log(self, message, level=logging.INFO, type='Unknown', command='Unknown', entity_type='', first_id='', second_id='', duration='n/a'):
 		"""
 		formally log information.
 		"""
-		# also add timestamp and thread id
-		pass
-
+		self._logger.log(level, self.logger_format,  { 	'type': type,
+														'command': command,
+														'entity_type': entity_type,
+														'first_id': first_id,
+														'second_id': second_id,
+														'duration': str(int(duration * 1000)),
+														'thread_id': threading.current_thread().ident,
+														'text': message,
+													})
+		
 
 
 	def performAPICall(self, params=dict()):
@@ -64,7 +89,8 @@ class CiviCRM:
 		else:
 			reply = requests.get(self.rest_url, params=params)
 
-		self.logger.debug("Calling URL: %s" % reply.url)
+		self.log("API call completed - status: %d, url: '%s'" % (reply.status_code, reply.url), 
+			logging.DEBUG, 'API', params['action'], params['entity'], params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
 
 		if reply.status_code != 200:
 			raise CiviAPIException("HTML response code %d received, please check URL" % reply.status_code)
@@ -75,14 +101,16 @@ class CiviCRM:
 		runtime = time.time()-timestamp
 		self._api_calls += 1
 		self._api_calls_time += runtime
-		self.logger.debug("API call took %dms" % int(runtime*1000))
 
 		if result.has_key('undefined_fields'):
 			fields = result['undefined_fields']
 			if fields:
-				self.logger.debug("Undefined fields reported: %s" % str(fields))
+				self.log("API call: Undefined fields reported: %s" % str(fields), 
+					logging.DEBUG, 'API', params['action'], params['entity'], params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
 
 		if result['is_error']:
+			self.log("API call error: '%s'" % result['error_message'], 
+				logging.DEBUG, 'API', params['action'], params['entity'], params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
 			raise CiviAPIException(result['error_message'])
 		else:
 			return result
@@ -123,7 +151,27 @@ class CiviCRM:
 			return result['values'][0]['id']
 
 
+	def getContactTagIds(self, entity_id):
+		query = { 'entity': 'EntityTag',
+				  'contact_id' : entity_id,
+				  'action' : 'get',
+				  }
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+		else:
+			count = result['count']
+			tags = set()
+			for entry in result['values']:
+				tags.add(entry['tag_id'])
+			if len(tags)!=count:
+				raise CiviAPIException("Error: tag count does not match number of delivered tags!")
+			return tags
+
+
+
 	def tagContact(self, entity_id, tag_id, value=True):
+		timestamp = time.time()
 		query = { 'entity': 'EntityTag',
 				  'contact_id' : entity_id,
 				  'tag_id' : tag_id,
@@ -136,33 +184,47 @@ class CiviCRM:
 		if result['is_error']:
 			raise CiviAPIException(result['error_message'])
 		elif result.get('added', False):
-			print "Added new tag#%s to contact#%s" % (tag_id, entity_id)
+			self.log("Added new tag(%s) to contact(%s)" % (tag_id, entity_id),
+				logging.INFO, 'pycivi', query['action'], 'EntityTag', entity_id, tag_id, time.time()-timestamp)
 		elif result.get('removed', False):
-			print "Removed tag#%s from contact#%s" % (tag_id, entity_id)
+			self.log("Removed tag(%s) from contact(%s)" % (tag_id, entity_id),
+				logging.INFO, 'pycivi', query['action'], 'EntityTag', entity_id, tag_id, time.time()-timestamp)
 		else:
-			print "No tags changed for contact#%s" % entity_id
+			self.log("No tags changed for contact#%s" % entity_id,
+				logging.DEBUG, 'pycivi', query['action'], 'EntityTag', entity_id, tag_id, time.time()-timestamp)
 
 
 	def getContactID(self, attributes, primary_attributes=['external_identifier']):
+		timestamp = time.time()
 		if attributes.has_key('id'):
 			return attributes['id']
 		elif attributes.has_key('contact_id'):
 			return attributes['contact_id']
 		
 		query = dict()
+		first_key = None
 		for key in primary_attributes: 
 			if attributes.has_key(key):
 				query[key] = attributes[key]
+				if first_key==None:
+					first_key = attributes[key]
 		query['entity'] = 'Contact'
 		query['action'] = 'get'
 		query['return'] = 'contact_id'
 
 		result = self.performAPICall(query)
 		if result['count']>1:
+			self.log("Query result not unique, please provide a unique query for 'getOrCreate'.",
+				logging.WARN, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
 			raise CiviAPIException("Query result not unique, please provide a unique query for 'getOrCreate'.")
 		elif result['count']==1:
-			return result['values'][0]['contact_id']
+			contact_id = result['values'][0]['contact_id']
+			self.log("Contact ID resolved.",
+				logging.DEBUG, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
+			return contact_id
 		else:
+			self.log("Contact not found.",
+				logging.DEBUG, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
 			return 0
 
 

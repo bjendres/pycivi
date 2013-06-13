@@ -2,6 +2,8 @@ import CiviCRM, entity_type
 import csv
 import codecs
 import threading
+import logging
+import time
 
 class UTF8Recoder:
     """
@@ -74,11 +76,13 @@ def import_contact_base(civicrm, record_source, parameters):
 
 	parameters['update_mode'] can be set to anything CiviCRM.createOrUpdate accepts
 	"""
+	timestamp = time.time()
 	entity_type = parameters.get('entity_type', 'Contact')
 	update_mode = parameters.get('update_mode', 'update')
 	for record in record_source:
 		entity = civicrm.createOrUpdate(entity_type, record, update_mode)
-		print "Written:", entity
+		civicrm.log(u"Wrote base contact '%s'" % unicode(str(entity), 'utf8'),
+			logging.INFO, 'importer', 'import_contact_base', 'Contact', entity.get('id'), None, time.time()-timestamp)
 
 
 def import_contact_tags(civicrm, record_source, parameters):
@@ -91,7 +95,8 @@ def import_contact_tags(civicrm, record_source, parameters):
 	for record in record_source:
 		contact_id = civicrm.getContactID(record)
 		if not contact_id:
-			print "Contact not found!"
+			civicrm.log("Contact not found: ID %s" % contact_id,
+				logging.WARN, 'importer', 'import_contact_tags', 'Contact', contact_id, None, 0)
 			continue
 
 		tag_ids = parameters.get('tag_ids', None)
@@ -106,21 +111,32 @@ def import_contact_tags(civicrm, record_source, parameters):
 				for tag_name in record.keys():
 					tag_id = civicrm.getOrCreateTagID(tag_name)
 					tag_ids[tag_name] = tag_id
-					print "Mapped tag '%s' to #%s" % (tag_name, tag_id)
+					civicrm.log("Tag '%s' has ID %s" % (tag_name, tag_id),
+						logging.INFO, 'importer', 'import_contact_tags', 'EntityTag', tag_id, None, 0)
 				parameters['tag_ids'] = tag_ids
 			parameters_lock.notifyAll()
 			parameters_lock.release()
 
+		currentTags = civicrm.getContactTagIds(contact_id)
+		tags2change = dict()
 		for tag_name in record.keys():
 			if not (tag_name in key_fields):
-				setTag = (record[tag_name].lower() in ['true', 1, '1', 'x', 'yes', 'y', 'ja', 'j'])
-				civicrm.tagContact(contact_id, tag_ids[tag_name], setTag)
+				desiredState = (record[tag_name].lower() in ['true', 1, '1', 'x', 'yes', 'y', 'ja', 'j'])
+				currentState = (tag_ids[tag_name] in currentTags)
+				if currentState != desiredState:
+					tags2change[tag_ids[tag_name]] = desiredState
+		if tags2change:
+			civicrm.log("Modifying tags for contact %s" % contact_id,
+				logging.INFO, 'importer', 'import_contact_tags', 'Contact', contact_id, None, 0)
+			for tag_id in tags2change:
+				civicrm.tagContact(contact_id, tag_id, tags2change[tag_id])
 
 
 
 
 def parallelize(civicrm, import_function, workers, record_source, parameters=dict()):
 	# multithreaded
+	timestamp = time.time()
 	record_list = list()
 	record_list_lock = threading.Condition()
 	thread_list = list()
@@ -136,7 +152,6 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
 
 	# then start the threads
 	class Worker(threading.Thread):
-		#def __init__(self, civicrm, entity_type, record_list, record_list_lock):
 		def __init__(self, function, civicrm, parameters, record_list, record_list_lock):
 			threading.Thread.__init__(self)
 			self.civicrm = civicrm
@@ -181,6 +196,7 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
 	
 	for worker in thread_list:
 		worker.join()
-	print "Done"
 
+	civicrm.log(u"Parallelized procedure '%s' completed." % import_function.__name__,
+		logging.INFO, 'importer', 'parallelize', None, None, None, time.time()-timestamp)
 
