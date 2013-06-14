@@ -9,8 +9,8 @@ class CiviEntity:
 	def __str__(self):
 		return (u'%s entity [%d]' % (self.entity_type, self.getInt('id'))).encode('utf8')
 
-	def get(self, attribute_key):
-		return self.attributes.get(attribute_key, None)
+	def get(self, attribute_key, default_value=None):
+		return self.attributes.get(attribute_key, default_value)
 
 	def getInt(self, attribute_key):
 		return int(self.attributes.get(attribute_key, -1))
@@ -94,5 +94,9 @@ class CiviTaggableEntity(CiviEntity):
 
 class CiviContactEntity(CiviTaggableEntity):
 	def __str__(self):
-		return (u'%s [%d]' % (self.get('display_name'), self.getInt('id'))).encode('utf8')
+		return (u'%s [%d]' % (self.get('display_name'), self.get('id'))).encode('utf8')
 
+
+class CiviPhoneEntity(CiviEntity):
+	def __str__(self):
+		return (u"%s:'%s' for contact [%s]" % (self.get('phone_type', "#"), self.get('phone'), self.get('contact_id'))).encode('utf8')

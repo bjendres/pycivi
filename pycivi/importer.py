@@ -103,9 +103,14 @@ def import_contact_address(civicrm, record_source, parameters=dict()):
 	parameters['update_mode'] 			either set to "update", "fill" or "replace" - or "add" to create a new entry
 	"""
 	_prepare_parameters(parameters)
-	timestamp = time.time()
 	for record in record_source:
+		timestamp = time.time()
 		record['contact_id'] = civicrm.getContactID(record)
+		if not record['contact_id']:
+			civicrm.log(u"Could not write contact address, contact not found for '%s'" % str(record),
+				logging.WARN, 'importer', 'import_contact_address', 'Address', None, None, time.time()-timestamp)
+			continue
+
 
 		# lookup state, country, location_type
 		"""
@@ -170,7 +175,46 @@ def import_contact_base(civicrm, record_source, parameters):
 			logging.INFO, 'importer', 'import_contact_base', 'Contact', entity.get('id'), None, time.time()-timestamp)
 
 
-def import_contact_tags(civicrm, record_source, parameters):
+def import_contact_phone(civicrm, record_source, parameters=dict()):
+	"""
+	Imports contact phone numbers.
+
+	Expects the fields:
+	"phone", "phone_type", "location_type"
+	and identification ('id', 'external_identifier', 'contact_id')
+	"""
+	_prepare_parameters(parameters)
+	for record in record_source:
+		timestamp = time.time()
+		record['contact_id'] = civicrm.getContactID(record)
+		if not record['contact_id']:
+			civicrm.log(u"Could not write contact phone, contact not found for '%s'" % str(record),
+				logging.WARN, 'importer', 'import_contact_phone', 'Phone', None, None, time.time()-timestamp)
+			continue
+
+		number = civicrm.getPhoneNumber(record)
+		if number:
+			del record['location_type']
+			del record['phone_type']
+			del record['external_identifier']
+			changed = number.update(record, store=True)
+			if changed:
+				civicrm.log("Updated phone number: %s" % str(number),
+					logging.INFO, 'importer', 'import_contact_phone', 'Phone', number.get('id'), record['contact_id'], time.time()-timestamp)
+			else:
+				civicrm.log("Nothing changed for phone number: %s" % str(number),
+					logging.INFO, 'importer', 'import_contact_phone', 'Phone', number.get('id'), record['contact_id'], time.time()-timestamp)
+
+		else:
+			number = civicrm.createPhoneNumber(record)
+			civicrm.log("Created phone number: %s" % str(number),
+				logging.INFO, 'importer', 'import_contact_phone', 'Phone', number.get('id'), record['contact_id'], time.time()-timestamp)
+
+
+
+
+
+def import_contact_tags(civicrm, record_source, parameters=dict()):
 	"""
 
 	"""
@@ -216,6 +260,10 @@ def import_contact_tags(civicrm, record_source, parameters):
 				logging.INFO, 'importer', 'import_contact_tags', 'Contact', contact_id, None, 0)
 			for tag_id in tags2change:
 				civicrm.tagContact(contact_id, tag_id, tags2change[tag_id])
+		else:
+			civicrm.log("Tags are up to date for contact %s" % contact_id,
+				logging.INFO, 'importer', 'import_contact_tags', 'Contact', contact_id, None, 0)
+
 
 
 

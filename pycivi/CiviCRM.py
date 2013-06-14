@@ -155,6 +155,11 @@ class CiviCRM:
 				query[key] = attributes[key]
 				if first_key==None:
 					first_key = attributes[key]
+		if not len(query) > 0:
+			self.log("No primary key provided with contact '%s'." % str(attributes),
+				logging.DEBUG, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
+			return 0
+
 		query['entity'] = 'Contact'
 		query['action'] = 'get'
 		query['return'] = 'contact_id'
@@ -208,6 +213,34 @@ class CiviCRM:
 
 
 
+
+	def getPhoneNumber(self, data):
+		timestamp = time.time()
+		query = dict()
+		query['action'] = 'get'
+		query['entity'] = 'Phone'
+		query['contact_id'] = data['contact_id']
+		query['phone_type'] = data['phone_type']
+		query['location_type'] = data['location_type']
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+		if result['count']>1:
+			self.log("Contact %s has more then one [%s/%s] phone number. Delivering first!" % (query.get('contact_id', 'n/a'), query.get('phone_type', 'n/a'), query.get('location_type', 'n/a')),
+				logging.ERROR, 'pycivi', 'get', 'Phone', query.get('contact_id', None), None, time.time()-timestamp)
+		elif result['count']==0:
+			return None
+		return self._createEntity('Phone', result['values'][0])
+
+	def createPhoneNumber(self, data):
+		timestamp = time.time()
+		query = dict(data)
+		query['action'] = 'create'
+		query['entity'] = 'Phone'
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+		return self._createEntity('Phone', result['values'][0])
 
 
 	def getOrCreateTagID(self, tag_name, description = None):
@@ -302,12 +335,16 @@ class CiviCRM:
 				query.update(attributes)
 				query['action'] = 'create'
 				result = self.performAPICall(query)
+				if result['is_error']:
+					raise CiviAPIException(result['error_message'])
 				return self._createEntity(entity_type, result['values'][0])
 
 
 	def _createEntity(self, entity_type, attributes):
 		if entity_type==etype.CONTACT:
-			return CiviContactEntity(entity_type, attributes['id'], self, attributes)
+			return CiviContactEntity(entity_type, attributes.get('id', None), self, attributes)
+		elif entity_type==etype.PHONE:
+			return CiviPhoneEntity(entity_type, attributes.get('id', None), self, attributes)
 		else:
-			return CiviEntity(entity_type, attributes['id'], self, attributes)
+			return CiviEntity(entity_type, attributes.get('id', None), self, attributes)
 
