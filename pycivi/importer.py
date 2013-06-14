@@ -211,6 +211,56 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
 				logging.INFO, 'importer', 'import_contact_phone', 'Phone', number.get('id'), record['contact_id'], time.time()-timestamp)
 
 
+def import_contact_email(civicrm, record_source, parameters=dict()):
+	"""
+	Imports contact email address
+
+	Expects the fields:
+	"email", "location_type"
+	and identification ('id', 'external_identifier', 'contact_id')
+	"""
+	_prepare_parameters(parameters)
+	for record in record_source:
+		timestamp = time.time()
+		record['contact_id'] = civicrm.getContactID(record)
+		if not record['contact_id']:
+			civicrm.log(u"Could not write contact email, contact not found for '%s'" % str(record),
+				logging.WARN, 'importer', 'import_contact_email', 'Email', None, None, time.time()-timestamp)
+			continue
+
+		# get the location type id
+		if (not record.has_key('location_type_id')):
+			location_type = record.get('location_type', parameters.get('location_type', 'Main'))
+			location_type_dict = _get_or_create_from_params('location_type_dict', parameters)
+
+			if location_type_dict.has_key(location_type):
+				record['location_type_id'] = location_type_dict[location_type]
+			else:
+				record['location_type_id'] = civicrm.getLocationTypeID(location_type)
+				location_type_dict[location_type] = record['location_type_id']
+			if not record['location_type_id']:
+				civicrm.log(u"Could not write contact email, location type %s could not be resolved" % location_type,
+					logging.WARN, 'importer', 'import_contact_email', 'Email', None, None, time.time()-timestamp)
+				continue
+
+
+		number = civicrm.getEmail(record['contact_id'], record['location_type_id'])
+		if number:
+			del record['location_type']
+			del record['location_type_id']
+			del record['external_identifier']
+			changed = number.update(record, store=True)
+			if changed:
+				civicrm.log("Updated email address: %s" % str(number),
+					logging.INFO, 'importer', 'import_contact_email', 'Email', number.get('id'), record['contact_id'], time.time()-timestamp)
+			else:
+				civicrm.log("Nothing changed for phone number: %s" % str(number),
+					logging.INFO, 'importer', 'import_contact_email', 'Email', number.get('id'), record['contact_id'], time.time()-timestamp)
+
+		else:
+			number = civicrm.createEmail(record['contact_id'], record['location_type_id'], record['email'])
+			civicrm.log("Created email address: %s" % str(number),
+				logging.INFO, 'importer', 'import_contact_email', 'Email', number.get('id'), record['contact_id'], time.time()-timestamp)
 
 
 

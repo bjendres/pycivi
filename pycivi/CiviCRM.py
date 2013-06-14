@@ -213,6 +213,37 @@ class CiviCRM:
 
 
 
+	def getEmail(self, contact_id, location_type_id):
+		timestamp = time.time()
+		query = dict()
+		query['action']			 	= 'get'
+		query['entity'] 			= 'Email'
+		query['contact_id'] 		= contact_id
+		query['location_type_id'] 	= location_type_id
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+		if result['count']>1:
+			self.log("Contact %s has more then one %s email address. Delivering first!" % (query.get('contact_id', 'n/a'), query.get('location_type', 'n/a')),
+				logging.WARN, 'pycivi', 'get', 'Email', query.get('contact_id', None), None, time.time()-timestamp)
+		elif result['count']==0:
+			return None
+		return self._createEntity('Email', result['values'][0])
+
+
+	def createEmail(self, contact_id, location_type_id, email):
+		timestamp = time.time()
+		query = dict()
+		query['action'] 			= 'create'
+		query['entity'] 			= 'Email'
+		query['location_type_id'] 	= location_type_id
+		query['contact_id'] 		= contact_id
+		query['email']  			= email
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+		return self._createEntity('Email', result['values'][0])
+
 
 	def getPhoneNumber(self, data):
 		timestamp = time.time()
