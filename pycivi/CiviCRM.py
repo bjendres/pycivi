@@ -19,6 +19,9 @@ class CiviCRM:
 		self.site_key = site_key
 		self.user_key = user_key
 
+		self.lookup_cache = dict()
+		self.lookup_cache_lock = threading.Condition()
+
 		# set up logging
 		self.logger_format = u"%(type)s;%(entity_type)s;%(first_id)s;%(second_id)s;%(duration)sms;%(thread_id)s;%(text)s"
 		self._logger = logging.getLogger('pycivi')
@@ -133,6 +136,80 @@ class CiviCRM:
 			return None
 
 	
+
+	###########################################################################
+	#                            Lookup methods                               #
+	###########################################################################
+
+	def getContactID(self, attributes, primary_attributes=['external_identifier']):
+		timestamp = time.time()
+		if attributes.has_key('id'):
+			return attributes['id']
+		elif attributes.has_key('contact_id'):
+			return attributes['contact_id']
+		
+		query = dict()
+		first_key = None
+		for key in primary_attributes: 
+			if attributes.has_key(key):
+				query[key] = attributes[key]
+				if first_key==None:
+					first_key = attributes[key]
+		query['entity'] = 'Contact'
+		query['action'] = 'get'
+		query['return'] = 'contact_id'
+
+		result = self.performAPICall(query)
+		if result['count']>1:
+			self.log("Query result not unique, please provide a unique query for 'getOrCreate'.",
+				logging.WARN, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
+			raise CiviAPIException("Query result not unique, please provide a unique query for 'getOrCreate'.")
+		elif result['count']==1:
+			contact_id = result['values'][0]['contact_id']
+			self.log("Contact ID resolved.",
+				logging.DEBUG, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
+			return contact_id
+		else:
+			self.log("Contact not found.",
+				logging.DEBUG, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
+			return 0
+
+
+	def getLocationTypeID(self, location_name):
+		# first: look up in cache
+		if self.lookup_cache.has_key('location_type2id') and self.lookup_cache['location_type2id'].has_key(location_name):
+			return self.lookup_cache['location_type2id'][location_name]
+
+		timestamp = time.time()
+		query = { 	'action': 'get',
+					'entity': 'LocationType',
+					'name': location_name }
+		result = self.performAPICall(query)
+		if result['count']>1:
+			self.log("Query result not unique, please provide a unique query for 'getOrCreate'.",
+				logging.WARN, 'pycivi', 'get', 'LocationType', None, None, time.time()-timestamp)
+			raise CiviAPIException("Query result not unique, please provide a unique query for 'getOrCreate'.")
+		elif result['count']==1:
+			location_id = result['values'][0]['id']
+			self.log("Location type '%s' resolved to id %s." % (location_name, location_id),
+				logging.DEBUG, 'pycivi', 'get', 'LocationType', location_id, None, time.time()-timestamp)
+		else:
+			location_id = 0
+			self.log("Location type '%s' resolved to id %s." % (location_name, location_id),
+				logging.ERROR, 'pycivi', 'get', 'LocationType', location_id, None, time.time()-timestamp)
+		self.lookup_cache_lock.acquire()
+		if not self.lookup_cache.has_key('location_type2id'):
+			self.lookup_cache['location_type2id'] = dict()
+		self.lookup_cache['location_type2id'][location_name] = location_id
+		self.lookup_cache_lock.notifyAll()
+		self.lookup_cache_lock.release()
+		return location_id
+
+
+
+
+
+
 	def getOrCreateTagID(self, tag_name, description = None):
 		query = { 'entity': 'Tag',
 				  'action': 'get',
@@ -194,38 +271,9 @@ class CiviCRM:
 				logging.DEBUG, 'pycivi', query['action'], 'EntityTag', entity_id, tag_id, time.time()-timestamp)
 
 
-	def getContactID(self, attributes, primary_attributes=['external_identifier']):
-		timestamp = time.time()
-		if attributes.has_key('id'):
-			return attributes['id']
-		elif attributes.has_key('contact_id'):
-			return attributes['contact_id']
-		
-		query = dict()
-		first_key = None
-		for key in primary_attributes: 
-			if attributes.has_key(key):
-				query[key] = attributes[key]
-				if first_key==None:
-					first_key = attributes[key]
-		query['entity'] = 'Contact'
-		query['action'] = 'get'
-		query['return'] = 'contact_id'
 
-		result = self.performAPICall(query)
-		if result['count']>1:
-			self.log("Query result not unique, please provide a unique query for 'getOrCreate'.",
-				logging.WARN, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
-			raise CiviAPIException("Query result not unique, please provide a unique query for 'getOrCreate'.")
-		elif result['count']==1:
-			contact_id = result['values'][0]['contact_id']
-			self.log("Contact ID resolved.",
-				logging.DEBUG, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
-			return contact_id
-		else:
-			self.log("Contact not found.",
-				logging.DEBUG, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
-			return 0
+
+
 
 
 	def createOrUpdate(self, entity_type, attributes, update_type='update', primary_attributes=[u'id', u'external_identifier']):
@@ -251,6 +299,7 @@ class CiviCRM:
 					raise CiviAPIException("Bad update_type '%s' selected. Must be 'update', 'fill' or 'replace'." % update_type)
 				return entity
 			else:
+				query.update(attributes)
 				query['action'] = 'create'
 				result = self.performAPICall(query)
 				return self._createEntity(entity_type, result['values'][0])

@@ -66,7 +66,91 @@ class CSVRecordSource:
 			return record
 
 
+def _get_or_create_from_params(name, parameters, create_entry=dict()):
+	entry = parameters.get(name, None)
+	if entry==None:	
+		parameters_lock = parameters['lock']
+		parameters_lock.acquire()
+		# test again, maybe another thread already created them...
+		entry = parameters.get(name, None)
+		if entry==None:
+			# no? ok, then it's up to us to query the tag ids
+			entry = create_entry
+			parameters[name] = entry
+		parameters_lock.notifyAll()
+		parameters_lock.release()
+	return entry
 
+def _prepare_parameters(parameters):
+	if not parameters.has_key('lock'):
+		parameters['lock'] = threading.Condition()
+
+
+
+
+
+def import_contact_address(civicrm, record_source, parameters=dict()):
+	"""
+	Makes sure, that the contact has the given address
+
+	Possible record entries:
+	"id", "contact_id", "location_type_id", "is_primary", "is_billing", "street_address", 
+	"supplemental_address_1", "supplemental_address_2", "city", "postal_code", "country_id", 
+	"manual_geo_code", 
+
+	Parameters:
+	parameters['location_type'] 		sets the type (default "Main") if no information provided by record
+	parameters['update_mode'] 			either set to "update", "fill" or "replace" - or "add" to create a new entry
+	"""
+	_prepare_parameters(parameters)
+	timestamp = time.time()
+	for record in record_source:
+		record['contact_id'] = civicrm.getContactID(record)
+
+		# lookup state, country, location_type
+		"""
+		if (not record.has_key('country_id')) and record.has_key('country'):
+			# lookup country ID:
+			country_codes = _get_or_create_from_params('country_codes', parameters)
+			if country_codes.has_key('country'):
+				record['country_id'] = country_codes['country']
+			else:
+				record['country_id'] = civicrm.getCountryID(record['country'])
+				country_codes['country'] = record['country_id']
+
+		if (not record.has_key('state_province_id')) and record.has_key('state_province_name'):
+			# lookup state ID:
+			state_province_codes = _get_or_create_from_params('state_province_codes', parameters)
+			if country_codes.has_key('state_province_name'):
+				record['state_province_id'] = country_codes['state_province_name']
+			else:
+				record['state_province_id'] = civicrm.getCountryID(record['state_province_name'])
+				country_codes['state_province_name'] = record['state_province_id']
+		"""
+
+		# get the location type id
+		if (not record.has_key('location_type_id')):
+			location_type = record.get('location_type', parameters.get('location_type', 'Main'))
+			location_type_dict = _get_or_create_from_params('location_type_dict', parameters)
+
+			if location_type_dict.has_key(location_type):
+				record['location_type_id'] = location_type_dict[location_type]
+			else:
+				record['location_type_id'] = civicrm.getLocationTypeID(location_type)
+				location_type_dict[location_type] = record['location_type_id']
+
+		mode = parameters.get('update_mode', 'update')
+		if mode in ['update', 'fill', 'replace']:
+			address = civicrm.createOrUpdate('Address', record, update_type=mode, primary_attributes=['contact_id', 'location_type_id'])
+		else:
+			# create a new one
+			pass
+
+		entity_type = parameters.get('entity_type', 'Contact')
+		update_mode = parameters.get('update_mode', 'update')
+		entity = civicrm.createOrUpdate(entity_type, record, update_mode)
+		civicrm.log(u"Wrote contact address for '%s'" % unicode(str(entity), 'utf8'),
+			logging.INFO, 'importer', 'import_contact_address', 'Address', entity.get('id'), None, time.time()-timestamp)
 
 
 def import_contact_base(civicrm, record_source, parameters):
@@ -76,6 +160,7 @@ def import_contact_base(civicrm, record_source, parameters):
 
 	parameters['update_mode'] can be set to anything CiviCRM.createOrUpdate accepts
 	"""
+	_prepare_parameters(parameters)
 	timestamp = time.time()
 	entity_type = parameters.get('entity_type', 'Contact')
 	update_mode = parameters.get('update_mode', 'update')
@@ -89,6 +174,7 @@ def import_contact_tags(civicrm, record_source, parameters):
 	"""
 
 	"""
+	_prepare_parameters(parameters)
 	entity_type = parameters.get('entity_type', 'Contact')
 	key_fields = parameters.get('key_fields', ['id', 'external_identifier'])
 
@@ -136,11 +222,11 @@ def import_contact_tags(civicrm, record_source, parameters):
 
 def parallelize(civicrm, import_function, workers, record_source, parameters=dict()):
 	# multithreaded
+	_prepare_parameters(parameters)
 	timestamp = time.time()
 	record_list = list()
 	record_list_lock = threading.Condition()
 	thread_list = list()
-	parameters['lock'] = threading.Condition()
 
 	# first fill the queue
 	record_source_iterator = record_source.__iter__()
