@@ -158,7 +158,7 @@ def import_contact_address(civicrm, record_source, parameters=dict()):
 			logging.INFO, 'importer', 'import_contact_address', 'Address', entity.get('id'), None, time.time()-timestamp)
 
 
-def import_contact_base(civicrm, record_source, parameters):
+def import_contact_base(civicrm, record_source, parameters=dict()):
 	"""
 	Imports very basic contact data, using the records' 'external_identifier' or 'id'
 	as identification.
@@ -209,6 +209,42 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
 			number = civicrm.createPhoneNumber(record)
 			civicrm.log("Created phone number: %s" % str(number),
 				logging.INFO, 'importer', 'import_contact_phone', 'Phone', number.get('id'), record['contact_id'], time.time()-timestamp)
+
+
+def import_contact_greeting(civicrm, record_source, parameters=dict()):
+	"""
+	Imports contact greeting settings
+
+	Expects the fields:
+	"postal_greeting", "postal_greeting_custom", "email_greeting", "email_greeting_custom"
+	and identification ('id', 'external_identifier', 'contact_id')
+	"""
+	_prepare_parameters(parameters)
+	for record in record_source:
+		timestamp = time.time()
+		contact = civicrm.getEntity(entity_type.CONTACT, record)
+		if not contact:
+			civicrm.log(u"Could not write contact greeting, contact not found for '%s'" % unicode(str(contact), 'utf8'),
+				logging.WARN, 'importer', 'import_contact_greeting', 'Contact', None, None, time.time()-timestamp)
+			continue
+		
+		update = dict(record)
+		if update.has_key('postal_greeting'):
+			if update['postal_greeting']:
+				update['postal_greeting_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('postal_greeting'), update['postal_greeting'])
+			del update['postal_greeting']
+		if update.has_key('email_greeting'):
+			if update['email_greeting']:
+				update['email_greeting_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('email_greeting'), update['email_greeting'])
+			del update['email_greeting']
+
+		changed = contact.update(update, True)
+		if changed:
+			civicrm.log(u"Updated greeting settings for contact: %s" % unicode(str(contact), 'utf8'),
+				logging.INFO, 'importer', 'import_contact_greeting', 'Contact', contact.get('id'), None, time.time()-timestamp)
+		else:
+			civicrm.log(u"Greeting settings not changed for contact: %s" % unicode(str(contact), 'utf8'),
+				logging.INFO, 'importer', 'import_contact_greeting', 'Contact', contact.get('id'), None, time.time()-timestamp)
 
 
 def import_contact_email(civicrm, record_source, parameters=dict()):

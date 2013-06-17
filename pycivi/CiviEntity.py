@@ -94,7 +94,7 @@ class CiviTaggableEntity(CiviEntity):
 
 class CiviContactEntity(CiviTaggableEntity):
 	def __str__(self):
-		return (u'%s [%d]' % (self.get('display_name'), self.get('id'))).encode('utf8')
+		return (u'%s [%s]' % (self.get('display_name'), self.get('id'))).encode('utf8')
 
 
 class CiviPhoneEntity(CiviEntity):
