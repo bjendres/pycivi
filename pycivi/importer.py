@@ -4,6 +4,7 @@ import codecs
 import threading
 import logging
 import time
+import traceback
 
 class UTF8Recoder:
     """
@@ -111,28 +112,6 @@ def import_contact_address(civicrm, record_source, parameters=dict()):
 				logging.WARN, 'importer', 'import_contact_address', 'Address', None, None, time.time()-timestamp)
 			continue
 
-
-		# lookup state, country, location_type
-		"""
-		if (not record.has_key('country_id')) and record.has_key('country'):
-			# lookup country ID:
-			country_codes = _get_or_create_from_params('country_codes', parameters)
-			if country_codes.has_key('country'):
-				record['country_id'] = country_codes['country']
-			else:
-				record['country_id'] = civicrm.getCountryID(record['country'])
-				country_codes['country'] = record['country_id']
-
-		if (not record.has_key('state_province_id')) and record.has_key('state_province_name'):
-			# lookup state ID:
-			state_province_codes = _get_or_create_from_params('state_province_codes', parameters)
-			if country_codes.has_key('state_province_name'):
-				record['state_province_id'] = country_codes['state_province_name']
-			else:
-				record['state_province_id'] = civicrm.getCountryID(record['state_province_name'])
-				country_codes['state_province_name'] = record['state_province_id']
-		"""
-
 		# get the location type id
 		if (not record.has_key('location_type_id')):
 			location_type = record.get('location_type', parameters.get('location_type', 'Main'))
@@ -146,16 +125,21 @@ def import_contact_address(civicrm, record_source, parameters=dict()):
 
 		mode = parameters.get('update_mode', 'update')
 		if mode in ['update', 'fill', 'replace']:
-			address = civicrm.createOrUpdate('Address', record, update_type=mode, primary_attributes=['contact_id', 'location_type_id'])
+			try:
+				address = civicrm.createOrUpdate('Address', record, update_type=mode, primary_attributes=['contact_id', 'location_type_id'])
+				civicrm.log(u"Wrote contact address for '%s'" % unicode(str(address), 'utf8'),
+					logging.INFO, 'importer', 'import_contact_address', 'Address', address.get('id'), None, time.time()-timestamp)
+			except:
+				civicrm.log("Exception while importing address for [%s]. Data was %s, exception: %s." % (record['contact_id'], str(record), traceback.format_exc()),
+					logging.ERROR, 'importer', 'import_contact_address', 'Address', None, record['contact_id'], time.time()-timestamp)
 		else:
-			# create a new one
-			pass
-
-		entity_type = parameters.get('entity_type', 'Contact')
-		update_mode = parameters.get('update_mode', 'update')
-		entity = civicrm.createOrUpdate(entity_type, record, update_mode)
-		civicrm.log(u"Wrote contact address for '%s'" % unicode(str(entity), 'utf8'),
-			logging.INFO, 'importer', 'import_contact_address', 'Address', entity.get('id'), None, time.time()-timestamp)
+			civicrm.log("Update mode '%s' not implemented!" % mode,
+				logging.ERROR, 'importer', 'import_contact_address', 'Address', None, record['contact_id'], time.time()-timestamp)
+			#entity_type = parameters.get('entity_type', 'Contact')
+			#update_mode = parameters.get('update_mode', 'update')
+			#entity = civicrm.createOrUpdate(entity_type, record, update_mode)
+			#civicrm.log(u"Wrote contact address for '%s'" % unicode(str(entity), 'utf8'),
+			#	logging.INFO, 'importer', 'import_contact_address', 'Address', entity.get('id'), None, time.time()-timestamp)
 
 
 def import_contact_base(civicrm, record_source, parameters=dict()):
@@ -192,7 +176,13 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
 				logging.WARN, 'importer', 'import_contact_phone', 'Phone', None, None, time.time()-timestamp)
 			continue
 
-		number = civicrm.getPhoneNumber(record)
+		try:
+			number = civicrm.getPhoneNumber(record)
+		except:
+			number = None
+			civicrm.log("Exception while updating phone number for [%s]. Data was %s, exception: %s." % (record['contact_id'], str(record), traceback.format_exc()),
+				logging.ERROR, 'importer', 'import_contact_phone', 'Phone', None, record['contact_id'], time.time()-timestamp)
+
 		if number:
 			del record['location_type']
 			del record['phone_type']
@@ -398,7 +388,15 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
 
 				if record:
 					# execute standard function
-					self.function(self.civicrm, [record], self.parameters)			
+					try:
+						self.function(self.civicrm, [record], self.parameters)			
+					except:
+						civicrm.log(u"Exception caught for '%s' on procedure '%s'. Exception was: %s" % (threading.currentThread().name, import_function.__name__, traceback.format_exc()),
+							logging.ERROR, 'importer', import_function.__name__, None, None, None, time.time()-timestamp)
+						civicrm.log(u"Failed record was: %s" % str(record),
+							logging.ERROR, 'importer', import_function.__name__, None, None, None, time.time()-timestamp)
+
+
 
 	for i in range(workers):
 		thread_list.append(Worker(import_function, civicrm, parameters, record_list, record_list_lock))

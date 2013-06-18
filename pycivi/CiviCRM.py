@@ -71,7 +71,7 @@ class CiviCRM:
 														'first_id': first_id,
 														'second_id': second_id,
 														'duration': str(int(duration * 1000)),
-														'thread_id': threading.current_thread().ident,
+														'thread_id': threading.currentThread().name,
 														'text': message,
 													})
 		
@@ -88,9 +88,9 @@ class CiviCRM:
 			params['debug'] = 1
 
 		if params['action'] in ['create', 'delete']:
-			reply = requests.post(self.rest_url, params=params)
+			reply = requests.post(self.rest_url, params=params, verify=False)
 		else:
-			reply = requests.get(self.rest_url, params=params)
+			reply = requests.get(self.rest_url, params=params, verify=False)
 
 		self.log("API call completed - status: %d, url: '%s'" % (reply.status_code, reply.url), 
 			logging.DEBUG, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
@@ -99,7 +99,7 @@ class CiviCRM:
 			raise CiviAPIException("HTML response code %d received, please check URL" % reply.status_code)
 
 		result = json.loads(reply.text)
-		
+				
 		# do some logging
 		runtime = time.time()-timestamp
 		self._api_calls += 1
@@ -402,7 +402,7 @@ class CiviCRM:
 			raise CiviAPIException(result['error_message'])
 		
 		# store value
-		value_id = result['value']
+		value_id = result['values'][0]['value']
 		self.lookup_cache_lock.acquire()
 		if not self.lookup_cache.has_key('option_value'):
 			self.lookup_cache['option_value'] = dict()
@@ -509,6 +509,30 @@ class CiviCRM:
 		return self._createEntity('Phone', result['values'][0])
 
 
+	def getOrCreatePrefix(self, prefix_text):
+		"""
+		Looks up or creates the given individual prefix
+		"""
+		timestamp = time.time()
+		option_group = 'individual_prefix'
+		option_group_id = self.getOptionGroupID(option_group)
+		if not option_group_id:
+			self.log("Option group '%s' not found!" % option_group,
+				logging.ERROR, 'pycivi', 'getOrCreatePrefix', 'OptionGroup', None, None, time.time()-timestamp)
+			return
+
+		greeting_id = self.getOptionValueID(option_group_id, prefix_text)
+		if greeting_id:
+			self.log("Prefix '%s' already exists [%s]" % (prefix_text, greeting_id),
+				logging.INFO, 'pycivi', 'getOrCreatePrefix', 'OptionValue', None, None, time.time()-timestamp)
+		if not greeting_id:
+			greeting_id = self.setOptionValue(option_group_id, prefix_text)
+			self.log("Prefix '%s' created [%s]" % (prefix_text, greeting_id),
+				logging.INFO, 'pycivi', 'getOrCreatePrefix', 'OptionValue', None, None, time.time()-timestamp)
+
+		return greeting_id
+
+
 	def getOrCreateGreeting(self, greeting_text, postal=False):
 		"""
 		Looks up or creates the given greeting for postal or email greetign
@@ -522,7 +546,7 @@ class CiviCRM:
 		option_group_id = self.getOptionGroupID(option_group)
 		if not option_group_id:
 			self.log("Option group '%s' not found!" % option_group,
-				logging.ERROR, 'pycivi', 'getOrCreateGreeting', 'OptionValue', None, None, time.time()-timestamp)
+				logging.ERROR, 'pycivi', 'getOrCreateGreeting', 'OptionGroup', None, None, time.time()-timestamp)
 			return
 
 		greeting_id = self.getOptionValueID(option_group_id, greeting_text)
