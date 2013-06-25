@@ -4,7 +4,6 @@ import codecs
 import threading
 import logging
 import time
-import traceback
 
 class UTF8Recoder:
     """
@@ -130,7 +129,7 @@ def import_contact_address(civicrm, record_source, parameters=dict()):
 				civicrm.log(u"Wrote contact address for '%s'" % unicode(str(address), 'utf8'),
 					logging.INFO, 'importer', 'import_contact_address', 'Address', address.get('id'), None, time.time()-timestamp)
 			except:
-				civicrm.log("Exception while importing address for [%s]. Data was %s, exception: %s." % (record['contact_id'], str(record), traceback.format_exc()),
+				civicrm.logException("Exception while importing address for [%s]. Data was %s, exception: " % (record['contact_id'], str(record)),
 					logging.ERROR, 'importer', 'import_contact_address', 'Address', None, record['contact_id'], time.time()-timestamp)
 		else:
 			civicrm.log("Update mode '%s' not implemented!" % mode,
@@ -180,7 +179,7 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
 			number = civicrm.getPhoneNumber(record)
 		except:
 			number = None
-			civicrm.log("Exception while updating phone number for [%s]. Data was %s, exception: %s." % (record['contact_id'], str(record), traceback.format_exc()),
+			civicrm.logException("Exception while updating phone number for [%s]. Data was %s, exception: " % (record['contact_id'], str(record)),
 				logging.ERROR, 'importer', 'import_contact_phone', 'Phone', None, record['contact_id'], time.time()-timestamp)
 
 		if number:
@@ -381,6 +380,7 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
 					record = record_list.pop(0)
 				else:
 					active = False
+					record = None
 
 				if record_list_lock:
 					record_list_lock.notifyAll()
@@ -391,7 +391,7 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
 					try:
 						self.function(self.civicrm, [record], self.parameters)			
 					except:
-						civicrm.log(u"Exception caught for '%s' on procedure '%s'. Exception was: %s" % (threading.currentThread().name, import_function.__name__, traceback.format_exc()),
+						civicrm.logException(u"Exception caught for '%s' on procedure '%s'. Exception was: " % (threading.currentThread().name, import_function.__name__),
 							logging.ERROR, 'importer', import_function.__name__, None, None, None, time.time()-timestamp)
 						civicrm.log(u"Failed record was: %s" % str(record),
 							logging.ERROR, 'importer', import_function.__name__, None, None, None, time.time()-timestamp)
@@ -413,7 +413,8 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
 		record_list_lock.release()
 	
 	for worker in thread_list:
-		worker.join()
+		if worker.isAlive():
+			worker.join()
 
 	civicrm.log(u"Parallelized procedure '%s' completed." % import_function.__name__,
 		logging.INFO, 'importer', 'parallelize', None, None, None, time.time()-timestamp)

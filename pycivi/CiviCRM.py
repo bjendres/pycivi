@@ -5,6 +5,8 @@ import json
 import entity_type as etype
 import time
 import threading
+import os
+import traceback
 
 from CiviEntity import *
 
@@ -23,7 +25,7 @@ class CiviCRM:
 		self.lookup_cache_lock = threading.Condition()
 
 		# set up logging
-		self.logger_format = u"%(type)s;%(entity_type)s;%(first_id)s;%(second_id)s;%(duration)sms;%(thread_id)s;%(text)s"
+		self.logger_format = u"%(level)s;%(type)s;%(entity_type)s;%(first_id)s;%(second_id)s;%(duration)sms;%(thread_id)s;%(text)s"
 		self._logger = logging.getLogger('pycivi')
 		self._logger.setLevel(logging.DEBUG)
 
@@ -38,7 +40,13 @@ class CiviCRM:
 
 		# add the file logger
 		if logfile:
-			logger2 = logging.FileHandler(logfile)
+			if not os.path.exists(logfile):
+				log = open(logfile, 'w')
+				log.write("timestamp;level;module;entity_type;primary_id;secondary_id;execution_time;thread;message\n")
+				log.flush()
+				log.close()
+
+			logger2 = logging.FileHandler(logfile, mode='a')
 			logger2.setLevel(logging.DEBUG)
 			logger2.setFormatter(logging.Formatter(u'%(asctime)s;%(message)s'))
 			self._logger.addHandler(logger2)
@@ -59,22 +67,50 @@ class CiviCRM:
 			else:
 				self.rest_url = self.url + '/sites/all/modules/civicrm/extern/rest.php'
 
+	def _getLevelString(self, level):
+		"""
+		give a textual representation of the log level
+		"""
+		if level==logging.DEBUG:
+			return 'DEBUG'
+		elif level==logging.INFO:
+			return 'INFO'
+		elif level==logging.WARN:
+			return 'WARN'
+		elif level==logging.ERROR:
+			return 'ERROR'
+		elif level==logging.FATAL:
+			return 'FATAL'
+		else:
+			return 'UNKNOWN'
 
-
-	def log(self, message, level=logging.INFO, type='Unknown', command='Unknown', entity_type='', first_id='', second_id='', duration='n/a'):
+	def log(self, message, level=logging.INFO, type='Unknown', command='Unknown', entity_type='', first_id='', second_id='', duration='0'):
 		"""
 		formally log information.
 		"""
+		try:
+			duration = str(int(duration * 1000))
+		except:
+			duration = '0'
+
 		self._logger.log(level, self.logger_format,  { 	'type': type,
+														'level': self._getLevelString(level),
 														'command': command,
 														'entity_type': entity_type,
 														'first_id': first_id,
 														'second_id': second_id,
-														'duration': str(int(duration * 1000)),
+														'duration': duration,
 														'thread_id': threading.currentThread().name,
 														'text': message,
 													})
-		
+
+	def logException(self, message="An exception occurred: ", level=logging.ERROR, type='Unknown', command='Unknown', entity_type='', first_id='', second_id='', duration='0'):
+		"""
+		log current exception (in except: block)
+		"""
+		exception_text = ' >> ' + traceback.format_exc() + ' <<'
+		exception_text = exception_text.replace('\x0A', '  ||')
+		self.log(message + exception_text, level, type, command, entity_type, first_id, second_id, duration)
 
 
 	def performAPICall(self, params=dict()):
