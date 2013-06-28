@@ -288,6 +288,97 @@ def import_contact_email(civicrm, record_source, parameters=dict()):
 				logging.INFO, 'importer', 'import_contact_email', 'Email', number.get('id'), record['contact_id'], time.time()-timestamp)
 
 
+def import_membership(civicrm, record_source, parameters=dict()):
+	"""
+	Imports memberships
+
+	Expects the fields:
+              u'membership_type_id',
+              u'status_id' | u'status'
+              u'join_date',
+              u'start_date',
+              u'end_date',
+	and identification ('id', 'external_identifier', 'contact_id')
+	"""
+	_prepare_parameters(parameters)
+	for record in record_source:
+		timestamp = time.time()
+		record['contact_id'] = civicrm.getContactID(record)
+		if not record['contact_id']:
+			civicrm.log(u"Could not write membership, contact not found for '%s'" % str(record),
+				logging.WARN, 'importer', 'import_membership', 'Membership', None, None, time.time()-timestamp)
+			continue
+		
+		record['is_override'] = 1 	# write status as-is
+		if record.has_key('status'):
+			status_id = civicrm.getMembershipStatusID(record['status'])
+			if not status_id:
+				civicrm.log(u"Membership status '%s' does not exist!" % record['status'],
+					logging.WARN, 'importer', 'import_membership', 'Membership', None, None, time.time()-timestamp)
+				continue
+
+			record['status_id'] = status_id
+			del record['status']
+
+		try:
+			membership = civicrm.createOrUpdate('Membership', record, update_type='update', primary_attributes=[u'contact_id'])
+			civicrm.log("Created membership: %s" % str(membership),
+				logging.INFO, 'importer', 'import_membership', 'Membership', membership.get('id'), record['contact_id'], time.time()-timestamp)
+		except:
+			civicrm.log("Failed to create membership for contact: %s" % record['contact_id'],
+				logging.ERROR, 'importer', 'import_membership', 'Membership', None, record['contact_id'], time.time()-timestamp)
+
+
+def import_contact_groups(civicrm, record_source, parameters=dict()):
+	_prepare_parameters(parameters)
+	entity_type = parameters.get('entity_type', 'Contact')
+	key_fields = parameters.get('key_fields', ['id', 'external_identifier'])
+
+	for record in record_source:
+		contact_id = civicrm.getContactID(record)
+		if not contact_id:
+			civicrm.log("Contact not found: ID %s" % contact_id,
+				logging.WARN, 'importer', 'import_contact_groups', 'Contact', contact_id, None, 0)
+			continue
+
+		group_ids = parameters.get('group_ids', None)
+		if group_ids==None:	# GET THE TAG IDS!
+			parameters_lock = parameters['lock']
+			parameters_lock.acquire()
+			# test again, maybe another thread already created them...
+			group_ids = parameters.get('group_ids', None)
+			if group_ids==None:
+				# no? ok, then it's up to us to query the tag ids
+				group_ids = dict()
+				for group_name in record.keys():
+					if group_name in key_fields:
+						continue
+					group_id = civicrm.getOrCreateGroupID(group_name)
+					group_ids[group_name] = group_id
+					civicrm.log("Group '%s' has ID %s" % (group_name, group_id),
+						logging.INFO, 'importer', 'import_contact_groups', 'GroupContact', group_id, None, 0)
+				parameters['group_ids'] = group_ids
+			parameters_lock.notifyAll()
+			parameters_lock.release()
+
+		currentGroups = civicrm.getContactGroupIds(contact_id)
+		groups2change = dict()
+		for group_name in record.keys():
+			if not (group_name in key_fields):
+				desiredState = (record[group_name].lower() in ['true', 1, '1', 'x', 'yes', 'y', 'ja', 'j'])
+				currentState = (group_ids[group_name] in currentGroups)
+				if currentState != desiredState:
+					groups2change[group_ids[group_name]] = desiredState
+		if groups2change:
+			civicrm.log("Modifying groups for contact %s" % contact_id,
+				logging.INFO, 'importer', 'import_contact_groups', 'Contact', contact_id, None, 0)
+			for tag_id in groups2change:
+				civicrm.setGroupMembership(contact_id, tag_id, groups2change[tag_id])
+		else:
+			civicrm.log("Groups are up to date for contact %s" % contact_id,
+				logging.INFO, 'importer', 'import_contact_groups', 'Contact', contact_id, None, 0)
+		
+
 
 def import_contact_tags(civicrm, record_source, parameters=dict()):
 	"""

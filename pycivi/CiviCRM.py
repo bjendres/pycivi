@@ -212,6 +212,35 @@ class CiviCRM:
 			return None
 
 
+	def createOrUpdate(self, entity_type, attributes, update_type='update', primary_attributes=[u'id', u'external_identifier']):
+		query = dict()
+		for key in primary_attributes: 
+			if attributes.has_key(key):
+				query[key] = attributes[key]
+		query['entity'] = entity_type
+		query['action'] = 'get'
+		result = self.performAPICall(query)
+		if result['count']>1:
+			raise CiviAPIException("Query result not unique, please provide a unique query for 'getOrCreate'.")
+		else:
+			if result['count']==1:
+				entity = self._createEntity(entity_type, result['values'][0])
+				if update_type=='update':
+					entity.update(attributes, True)
+				elif update_type=='fill':
+					entity.fill(attributes, True)
+				elif update_type=='replace':
+					entity.replace(attributes, True)
+				else:
+					raise CiviAPIException("Bad update_type '%s' selected. Must be 'update', 'fill' or 'replace'." % update_type)
+				return entity
+			else:
+				query.update(attributes)
+				query['action'] = 'create'
+				result = self.performAPICall(query)
+				if result['is_error']:
+					raise CiviAPIException(result['error_message'])
+				return self._createEntity(entity_type, result['values'][0])
 
 
 	###########################################################################
@@ -482,6 +511,37 @@ class CiviCRM:
 		return location_id
 
 
+	def getMembershipStatusID(self, membership_status_name):
+		# first: look up in cache
+		if self.lookup_cache.has_key('membership_status2id') and self.lookup_cache['membership_status2id'].has_key(membership_status_name):
+			return self.lookup_cache['membership_status2id'][membership_status_name]
+
+		timestamp = time.time()
+		query = { 	'action': 'get',
+					'entity': 'MembershipStatus',
+					'name': membership_status_name }
+		result = self.performAPICall(query)
+		if result['count']>1:
+			self.log("Non-uniqe membership status name '%s'" % membership_status_name,
+				logging.WARN, 'API', 'get', 'MembershipStatus', None, None, time.time()-timestamp)
+			raise CiviAPIException("Non-uniqe membership status name '%s'" % membership_status_name)
+		elif result['count']==1:
+			status_id = result['values'][0]['id']
+			self.log("Membership status '%s' resolved to id %s." % (membership_status_name, status_id),
+				logging.DEBUG, 'API', 'get', 'MembershipStatus', status_id, None, time.time()-timestamp)
+		else:
+			status_id = 0
+			self.log("Membership status '%s' could NOT be resolved",
+				logging.DEBUG, 'API', 'get', 'MembershipStatus', None, None, time.time()-timestamp)
+
+		self.lookup_cache_lock.acquire()
+		if not self.lookup_cache.has_key('membership_status2id'):
+			self.lookup_cache['membership_status2id'] = dict()
+		self.lookup_cache['membership_status2id'][membership_status_name] = status_id
+		self.lookup_cache_lock.notifyAll()
+		self.lookup_cache_lock.release()
+		return status_id
+
 
 
 	def getEmail(self, contact_id, location_type_id):
@@ -615,6 +675,25 @@ class CiviCRM:
 			return result['values'][0]['id']
 
 
+	def getOrCreateGroupID(self, group_name, description = None):
+		query = { 'entity': 'Group',
+				  'action': 'get',
+				  'title' : group_name}
+		result = self.performAPICall(query)
+		if result['count']>1:
+			raise CiviAPIException("Group name query result not unique, this should not happen!")
+		elif result['count']==1:
+			return result['values'][0]['id']
+		else:
+			# group doesn't exist => create
+			query['action'] = 'create'
+			query['group_type'] = '[2]'  # set as Mailing Group
+			if description:
+				query['description'] = description
+			result = self.performAPICall(query)
+			return result['values'][0]['id']
+
+
 	def getContactTagIds(self, entity_id):
 		query = { 'entity': 'EntityTag',
 				  'contact_id' : entity_id,
@@ -632,6 +711,20 @@ class CiviCRM:
 				raise CiviAPIException("Error: tag count does not match number of delivered tags!")
 			return tags
 
+
+	def getContactGroupIds(self, entity_id):
+		query = { 'entity': 'GroupContact',
+				  'contact_id' : entity_id,
+				  'action' : 'get',
+				  }
+		result = self.performAPICall(query)
+		count = result['count']
+		groups = set()
+		for entry in result['values']:
+			groups.add(entry['group_id'])
+		if len(groups)!=count:
+			raise CiviAPIException("Error: group count does not match number of delivered group!")
+		return groups
 
 
 	def tagContact(self, entity_id, tag_id, value=True):
@@ -658,40 +751,30 @@ class CiviCRM:
 				logging.DEBUG, 'pycivi', query['action'], 'EntityTag', entity_id, tag_id, time.time()-timestamp)
 
 
-
-
-
-
-
-	def createOrUpdate(self, entity_type, attributes, update_type='update', primary_attributes=[u'id', u'external_identifier']):
-		query = dict()
-		for key in primary_attributes: 
-			if attributes.has_key(key):
-				query[key] = attributes[key]
-		query['entity'] = entity_type
-		query['action'] = 'get'
-		result = self.performAPICall(query)
-		if result['count']>1:
-			raise CiviAPIException("Query result not unique, please provide a unique query for 'getOrCreate'.")
+	def setGroupMembership(self, entity_id, group_id, value=True):
+		timestamp = time.time()
+		query = { 'entity': 'GroupContact',
+				  'contact_id' : entity_id,
+				  'group_id' : group_id,
+				  }
+		if value:
+			query['action'] = 'create'
 		else:
-			if result['count']==1:
-				entity = self._createEntity(entity_type, result['values'][0])
-				if update_type=='update':
-					entity.update(attributes, True)
-				elif update_type=='fill':
-					entity.fill(attributes, True)
-				elif update_type=='replace':
-					entity.replace(attributes, True)
-				else:
-					raise CiviAPIException("Bad update_type '%s' selected. Must be 'update', 'fill' or 'replace'." % update_type)
-				return entity
-			else:
-				query.update(attributes)
-				query['action'] = 'create'
-				result = self.performAPICall(query)
-				if result['is_error']:
-					raise CiviAPIException(result['error_message'])
-				return self._createEntity(entity_type, result['values'][0])
+			query['action'] = 'delete'
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+		elif result.get('added', False):
+			self.log("Added contact (%s) to group (%s)." % (entity_id, group_id),
+				logging.INFO, 'pycivi', query['action'], 'GroupContact', entity_id, group_id, time.time()-timestamp)
+		elif result.get('removed', False):
+			self.log("Removed contact (%s) from group (%s)." % (entity_id, group_id),
+				logging.INFO, 'pycivi', query['action'], 'GroupContact', entity_id, group_id, time.time()-timestamp)
+		else:
+			self.log("No group membership changed for contact (%s)" % entity_id,
+				logging.DEBUG, 'pycivi', query['action'], 'GroupContact', entity_id, group_id, time.time()-timestamp)
+
+
 
 
 	def _createEntity(self, entity_type, attributes):
