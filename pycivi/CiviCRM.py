@@ -149,7 +149,7 @@ class CiviCRM:
 
 		if result['is_error']:
 			self.log("API call error: '%s'" % result['error_message'], 
-				logging.DEBUG, 'API', params['action'], params['entity'], params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
+				logging.ERROR, 'API', params['action'], params['entity'], params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
 			raise CiviAPIException(result['error_message'])
 		else:
 			return result
