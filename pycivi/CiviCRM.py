@@ -286,7 +286,48 @@ class CiviCRM:
 				logging.DEBUG, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
 			return 0
 
-	
+
+	def getCampaignID(self, attribute_value, attribute_key='title'):
+		"""
+		Get the ID for a given campaign
+
+		Results will be cached
+		"""
+		timestamp = time.time()
+		if self.lookup_cache.has_key('campaign') and self.lookup_cache['campaign'].has_key(attribute_key) and self.lookup_cache['campaign'][attribute_key].has_key(attribute_value):
+			return self.lookup_cache['campaign'][attribute_key][attribute_value]
+
+		query = dict()
+		query['entity'] = 'Campaign'
+		query['action'] = 'get'
+		query[attribute_key] = attribute_value
+		result = self.performAPICall(query)
+		if result['count']>1:
+			campaign_id = 0
+			self.log(u"More than one campaign found with %s '%s'!" % (attribute_key, attribute_value),
+				logging.WARN, 'pycivi', 'getCampaignID', 'Campaign', None, None, time.time()-timestamp)
+		elif result['count']==0:
+			campaign_id = 0
+			self.log(u"No campaign found with %s '%s'!" % (attribute_key, attribute_value),
+				logging.DEBUG, 'pycivi', 'getCampaignID', 'Campaign', None, None, time.time()-timestamp)
+		else:
+			campaign_id = result['values'][0]['id']
+			self.log(u"Campaign with %s '%s' resolved to ID %s!" % (attribute_key, attribute_value, campaign_id),
+				logging.DEBUG, 'pycivi', 'getCampaignID', 'Campaign', None, None, time.time()-timestamp)
+
+		# store value
+		self.lookup_cache_lock.acquire()
+		if not self.lookup_cache.has_key('campaign'):
+			self.lookup_cache['campaign'] = dict()
+		if not self.lookup_cache['campaign'].has_key(attribute_key):
+			self.lookup_cache['campaign'][attribute_key] = dict()
+		self.lookup_cache['campaign'][attribute_key][attribute_value] = campaign_id
+		self.lookup_cache_lock.notifyAll()
+		self.lookup_cache_lock.release()
+
+		return campaign_id
+
+
 	def getCustomFieldID(self, field_name, entity_type='Contact'):
 		"""
 		Get the ID for a given custom field
@@ -301,19 +342,17 @@ class CiviCRM:
 		query['label'] = field_name
 
 		result = self.performAPICall(query)
-		if result['is_error']:
-			raise CiviAPIException(result['error_message'])
 		if result['count']>1:
 			field_id = 0
-			self.log(u"More than one custom field found with name '%s'!" % field_name.encode('utf8'),
+			self.log(u"More than one custom field found with name '%s'!" % field_name,
 				logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
 		elif result['count']==0:
 			field_id = 0
-			self.log(u"Custom field '%s' does not exist." % field_name.encode('utf8'),
+			self.log(u"Custom field '%s' does not exist." % field_name,
 				logging.DEBUG, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
 		else:
 			field_id = result['values'][0]['id']
-			self.log(u"Custom field '%s' resolved to ID %s" % (field_name, field_id),
+			self.log(u"Custom field '%s' resolved to ID %s" % field_name,
 				logging.DEBUG, 'API', 'get', 'CustomField', field_id, None, time.time()-timestamp)
 
 		# store value
@@ -334,7 +373,7 @@ class CiviCRM:
 		timestamp = time.time()
 		field_id = self.getCustomFieldID(field_name)
 		if not field_id:
-			self.log(u"Custom field '%s' does not exist." % field_name.encode('utf8'),
+			self.log(u"Custom field '%s' does not exist." % field_name,
 				logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
 			return
 
@@ -349,15 +388,15 @@ class CiviCRM:
 			raise CiviAPIException(result['error_message'])
 		if result['count']>1:
 			field_id = 0
-			self.log(u"More than one custom field found with name '%s'!" % field_name.encode('utf8'),
+			self.log(u"More than one custom field found with name '%s'!" % field_name,
 				logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
 		elif result['count']==0:
 			field_id = 0
-			self.log(u"Custom field '%s' does not exist." % field_name.encode('utf8'),
+			self.log(u"Custom field '%s' does not exist." % field_name,
 				logging.DEBUG, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
 		else:
 			field_id = result['values'][0]['id']
-			self.log(u"Custom field '%s' resolved to ID %s" % (unicode(field_name, 'utf8'), field_id),
+			self.log(u"Custom field '%s' resolved to ID %s" % (field_name, field_id),
 				logging.DEBUG, 'API', 'get', 'CustomField', field_id, None, time.time()-timestamp)
 
 		# store value
@@ -782,6 +821,8 @@ class CiviCRM:
 			return CiviContactEntity(entity_type, attributes.get('id', None), self, attributes)
 		elif entity_type==etype.PHONE:
 			return CiviPhoneEntity(entity_type, attributes.get('id', None), self, attributes)
+		elif entity_type==etype.CAMPAIGN:
+			return CiviCampaignEntity(entity_type, attributes.get('id', None), self, attributes)
 		else:
 			return CiviEntity(entity_type, attributes.get('id', None), self, attributes)
 

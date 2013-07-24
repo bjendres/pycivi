@@ -37,10 +37,11 @@ class UnicodeReader:
 
 
 class CSVRecordSource:
-	def __init__(self, csv_file, mapping=dict(), delimiter=','):
+	def __init__(self, csv_file, mapping=dict(), transformations=dict(), delimiter=','):
 		inputStream = open(csv_file, 'rb')
 		self.reader = UnicodeReader(inputStream, 'excel', 'utf8', delimiter=delimiter, quotechar='"')
 		self.mapping = mapping
+		self.transformations = transformations
 		self.row_iterator = None
 		self.header = None
 
@@ -59,10 +60,15 @@ class CSVRecordSource:
 			record = dict()
 			for i in range(len(row)):
 				field = self.header[i]
+				data = row[i]
 				if field in self.mapping:
 					field = self.mapping[field]
 				if field!=None:
-					record[field] = row[i]
+					# see if there is a translation
+					if field in self.transformations:
+						#print "Replace %s with %s." % (data, self.transformations[field].get(data, data))
+						data = self.transformations[field].get(data, data)
+					record[field] = data
 			return record
 
 
@@ -86,6 +92,103 @@ def _prepare_parameters(parameters):
 		parameters['lock'] = threading.Condition()
 
 
+def import_contributions(civicrm, record_source, parameters=dict()):
+	"""
+	Imports import_contributions
+
+	parameters['update_mode'] can be set to anything CiviCRM.createOrUpdate accepts
+	parameters['id'] can be set to the identifying field (e.g. 'external_identifier' or 'trxn_id')
+	"""
+	_prepare_parameters(parameters)
+	timestamp = time.time()
+	entity_type = parameters.get('entity_type', 'Contribution')
+	update_mode = parameters.get('update_mode', 'update')
+	for record in record_source:
+		update = dict(record)
+		# lookup contact_id
+		if update.has_key('contact_external_identifier'):
+			if update['contact_external_identifier']:
+				update['contact_id'] = civicrm.getContactID({'external_identifier': update['contact_external_identifier']})
+			del update['contact_external_identifier']
+		if not update.has_key('contact_id') or not update['contact_id']:
+			civicrm.log(u"Contact not found! No valid contact reference specified in (%s)" % unicode(str(record), 'utf8'),
+				logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
+			continue
+		
+		# lookup payment type
+		if update.has_key('payment_instrument'):
+			if update['payment_instrument']:
+				update['payment_instrument_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('payment_instrument'), update['payment_instrument'])
+			del update['payment_instrument']
+		if not update.has_key('payment_instrument_id') or not update['payment_instrument_id']:
+			civicrm.log(u"Payment type ID not found! No valid payment type specified in (%s)" % unicode(str(record), 'utf8'),
+				logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
+			continue
+
+		# lookup campaign
+		if update.has_key('contribution_campaign'):
+			if update['contribution_campaign']:
+				update['contribution_campaign_id'] = civicrm.getCampaignID(update['contribution_campaign'])
+				if not update['contribution_campaign_id']:
+					civicrm.log(u"Campaign ID not found! No valid campaign specified in (%s)" % unicode(str(record), 'utf8'),
+						logging.WARN, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
+			del update['contribution_campaign']
+
+		# lookup contribution status
+		if update.has_key('contribution_status'):
+			if update['contribution_status']:
+				update['contribution_status_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('contribution_status'), update['contribution_status'])
+			del update['contribution_status']
+		if not update.has_key('contribution_status_id') or not update['contribution_status_id']:
+			civicrm.log(u"Contribution status ID not found! No valid contribution status specified in (%s)" % unicode(str(record), 'utf8'),
+				logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
+			continue
+
+		entity = civicrm.createOrUpdate(entity_type, update, update_mode, ['contribution_id', 'trxn_id'])
+		civicrm.log(u"Wrote contribution '%s'" % unicode(str(entity), 'utf8'),
+			logging.INFO, 'importer', 'import_contributions', 'Contribution', entity.get('id'), None, time.time()-timestamp)
+
+
+def import_campaigns(civicrm, record_source, parameters=dict()):
+	"""
+	Imports campaigns
+
+	parameters['update_mode'] can be set to anything CiviCRM.createOrUpdate accepts
+	parameters['id'] can be set to the identifying field (e.g. 'external_identifier' or 'name')
+	"""
+	_prepare_parameters(parameters)
+	timestamp = time.time()
+	entity_type = parameters.get('entity_type', 'Campaign')
+	update_mode = parameters.get('update_mode', 'update')
+	for record in record_source:
+		
+		update = dict(record)
+		# lookup campaign type
+		if update.has_key('campaign_type'):
+			if update['campaign_type']:
+				update['campaign_type_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('campaign_type'), update['campaign_type'])
+			del update['campaign_type']
+		if not update.has_key('campaign_type_id') or not update['campaign_type_id']:
+			civicrm.log(u"Campaign type ID not identified! No valid campaign type specified in (%s)" % unicode(str(record), 'utf8'),
+				logging.ERROR, 'importer', 'import_campaigns', 'Campaign', None, None, time.time()-timestamp)
+			continue
+		
+		# lookup campaign status
+		if update.has_key('status'):
+			if update['status']:
+				update['status_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('campaign_status'), update['status'])
+			del update['status']
+		if not update.has_key('campaign_type_id') or not update['campaign_type_id']:
+			civicrm.log(u"Campaign status ID not identified! No valid campaign status specified in (%s)" % unicode(str(record), 'utf8'),
+				logging.ERROR, 'importer', 'import_campaigns', 'Campaign', None, None, time.time()-timestamp)
+			continue
+
+		if parameters.has_key('id'):
+			entity = civicrm.createOrUpdate(entity_type, update, update_mode, [parameters['id']])
+		else:
+			entity = civicrm.createOrUpdate(entity_type, update, update_mode)
+		civicrm.log(u"Wrote campaign '%s'" % unicode(str(entity), 'utf8'),
+			logging.INFO, 'importer', 'import_campaign', 'Campaign', entity.get('id'), None, time.time()-timestamp)
 
 
 
@@ -435,8 +538,13 @@ def import_contact_tags(civicrm, record_source, parameters=dict()):
 
 
 def parallelize(civicrm, import_function, workers, record_source, parameters=dict()):
-	# multithreaded
 	_prepare_parameters(parameters)
+	# if only on worker, just call directly
+	if workers==1:
+		import_function(civicrm, record_source, parameters)
+		return
+
+	# multithreaded
 	timestamp = time.time()
 	record_list = list()
 	record_list_lock = threading.Condition()

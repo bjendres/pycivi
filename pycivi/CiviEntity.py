@@ -100,3 +100,7 @@ class CiviContactEntity(CiviTaggableEntity):
 class CiviPhoneEntity(CiviEntity):
 	def __str__(self):
 		return (u"%s:'%s' for contact [%s]" % (self.get('phone_type', "#"), self.get('phone'), self.get('contact_id'))).encode('utf8')
+
+class CiviCampaignEntity(CiviEntity):
+	def __str__(self):
+		return (u"Campaign (%s): \"%s\"" % (self.get('id'), self.get('title'))).encode('utf8')
