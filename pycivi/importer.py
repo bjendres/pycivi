@@ -4,6 +4,7 @@ import codecs
 import threading
 import logging
 import time
+import traceback
 
 class UTF8Recoder:
     """
@@ -98,6 +99,7 @@ def import_contributions(civicrm, record_source, parameters=dict()):
 
 	parameters['update_mode'] can be set to anything CiviCRM.createOrUpdate accepts
 	parameters['id'] can be set to the identifying field (e.g. 'external_identifier' or 'trxn_id')
+	parameters['fallback_contact'] can be set to  provide a default fallback contact ID (e.g. "Unkown Donor")
 	"""
 	_prepare_parameters(parameters)
 	timestamp = time.time()
@@ -111,9 +113,15 @@ def import_contributions(civicrm, record_source, parameters=dict()):
 				update['contact_id'] = civicrm.getContactID({'external_identifier': update['contact_external_identifier']})
 			del update['contact_external_identifier']
 		if not update.has_key('contact_id') or not update['contact_id']:
-			civicrm.log(u"Contact not found! No valid contact reference specified in (%s)" % unicode(str(record), 'utf8'),
-				logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
-			continue
+
+			if parameters.has_key('fallback_contact'):
+				update['contact_id'] = parameters['fallback_contact']
+				civicrm.log(u"Contact not found! Will be attributed to fallback contact %s" % str(parameters['fallback_contact']),
+					logging.INFO, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
+			else:
+				civicrm.log(u"Contact not found! No valid contact reference specified in (%s)" % unicode(str(record), 'utf8'),
+					logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
+				continue
 		
 		# lookup payment type
 		if update.has_key('payment_instrument'):
@@ -144,7 +152,8 @@ def import_contributions(civicrm, record_source, parameters=dict()):
 				logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
 			continue
 
-		entity = civicrm.createOrUpdate(entity_type, update, update_mode, ['contribution_id', 'trxn_id'])
+		#entity = civicrm.createOrUpdate(entity_type, update, update_mode, ['contribution_id', 'trxn_id'])
+		entity = civicrm.createOrUpdate(entity_type, update, update_mode, ['id', 'trxn_id'])
 		civicrm.log(u"Wrote contribution '%s'" % unicode(str(entity), 'utf8'),
 			logging.INFO, 'importer', 'import_contributions', 'Contribution', entity.get('id'), None, time.time()-timestamp)
 
@@ -191,6 +200,66 @@ def import_campaigns(civicrm, record_source, parameters=dict()):
 			logging.INFO, 'importer', 'import_campaign', 'Campaign', entity.get('id'), None, time.time()-timestamp)
 
 
+
+def import_notes(civicrm, record_source, parameters=dict()):
+	"""
+	Imports notes
+
+	Expects the fields:
+              'entity_table'
+              'entity_id'
+              'note'
+              'subject'
+              'privacy'
+
+	It will also resolve the entity_type:
+			  'lookup_type'
+			  'lookup_identifier_key'
+			  'lookup_identifier_value'
+		to generate entity_table and entity_id
+
+	the parameters can contain
+		'mode' = 'add' (default)	- will always add a new note
+		'mode' = 'replace_subject'  - will replace a note with the same subject
+	"""
+	_prepare_parameters(parameters)
+	for record in record_source:
+		timestamp = time.time()
+		if 'lookup_type' in record and 'lookup_identifier_key' in record and 'lookup_identifier_value' in record:
+			# will lookup the related entity
+			entity_type = record['lookup_type']
+			entity_lookup_key = record['lookup_identifier_key']
+			entity_lookup_value = record['lookup_identifier_value']
+
+			civicrm.log(u"Looking up a %s with %s='%s'" % (entity_type, entity_lookup_key, entity_lookup_value),
+				logging.INFO, 'importer', 'import_notes', 'Note', None, None, time.time()-timestamp)
+			try:
+				entity = civicrm.getEntity(entity_type, {entity_lookup_key: entity_lookup_value}, primary_attributes=[entity_lookup_key])
+				if entity:
+					record['entity_table'] = 'civicrm_' + entity_type.lower()
+					record['entity_id'] = entity.get('id')
+				else:
+					civicrm.log(u"Couldn't find a %s with %s='%s'" % (entity_type, entity_lookup_key, entity_lookup_value),
+						logging.ERROR, 'importer', 'import_notes', 'Note', None, Note, time.time()-timestamp)
+			except:
+				pass
+
+		if not 'entity_id' in record or not 'entity_table' in record:
+			civicrm.log("Failed to create note, missing target information entity_id and entity_table", 
+				logging.ERROR, 'importer', 'import_notes', 'Note', None, None, time.time()-timestamp)
+			continue
+
+		try:
+			mode = parameters.get('mode', 'add')
+			primary_attributes = ['entity_id', 'entity_table', 'id']
+			if mode=='replace_subject':
+				primary_attributes.append('subject')
+			note = civicrm.createOrUpdate('Note', record, update_type='update', primary_attributes=primary_attributes)
+			civicrm.log("Created note: %s" % str(note),
+				logging.INFO, 'importer', 'import_notes', 'Note', note.get('id'), record['entity_id'], time.time()-timestamp)
+		except:
+			civicrm.log("Failed to create note for entity: %s" % record['entity_id'],
+				logging.ERROR, 'importer', 'import_notes', 'Note', None, record['entity_id'], time.time()-timestamp)
 
 def import_contact_address(civicrm, record_source, parameters=dict()):
 	"""

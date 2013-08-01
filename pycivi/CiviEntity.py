@@ -104,3 +104,17 @@ class CiviPhoneEntity(CiviEntity):
 class CiviCampaignEntity(CiviEntity):
 	def __str__(self):
 		return (u"Campaign (%s): \"%s\"" % (self.get('id'), self.get('title'))).encode('utf8')
+
+
+class CiviContributionEntity(CiviTaggableEntity):
+	def __str__(self):
+		return (u'Contribution [%s]' % self.get('id')).encode('utf8')
+
+	def _storeChanges(self, changed_attributes):
+		if changed_attributes:
+			# we have to submit the contact ID in any case, so that an activity can be produced!	
+			if not 'contact_id' in changed_attributes:
+				changed_attributes['contact_id'] = self.get('contact_id')
+			return CiviTaggableEntity._storeChanges(self, changed_attributes)
+		return dict()
+

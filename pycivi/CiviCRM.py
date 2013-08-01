@@ -189,7 +189,7 @@ class CiviCRM:
 					first_key = attributes[key]
 		if not len(query) > 0:
 			self.log("No primary key provided with contact '%s'." % str(attributes),
-				logging.DEBUG, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
+				logging.DEBUG, 'pycivi', 'get', entity_type, first_key, None, time.time()-timestamp)
 			return 0
 
 		query['entity'] = entity_type
@@ -248,7 +248,7 @@ class CiviCRM:
 	###########################################################################
 
 
-	def getContactID(self, attributes, primary_attributes=['external_identifier']):
+	def getContactID(self, attributes, primary_attributes=['external_identifier'], search_deleted=True):
 		timestamp = time.time()
 		if attributes.has_key('id'):
 			return attributes['id']
@@ -282,6 +282,15 @@ class CiviCRM:
 				logging.DEBUG, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
 			return contact_id
 		else:
+			if search_deleted and not int(attributes.get('is_deleted', '0'))==1:
+				# NOT found, but we haven't looked into the deleted contacts
+				#print "NOT FOUND. LOOKING IN DELTED."
+				new_attributes = dict(attributes)
+				new_primary_attributes = list(primary_attributes)
+				new_attributes['is_deleted'] = '1'
+				new_primary_attributes += ['is_deleted']
+				return self.getContactID(new_attributes, new_primary_attributes, search_deleted)
+			#print "STILL NOT FOUND!"
 			self.log("Contact not found.",
 				logging.DEBUG, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
 			return 0
@@ -819,6 +828,8 @@ class CiviCRM:
 	def _createEntity(self, entity_type, attributes):
 		if entity_type==etype.CONTACT:
 			return CiviContactEntity(entity_type, attributes.get('id', None), self, attributes)
+		elif entity_type==etype.CONTRIBUTION:
+			return CiviContributionEntity(entity_type, attributes.get('id', None), self, attributes)
 		elif entity_type==etype.PHONE:
 			return CiviPhoneEntity(entity_type, attributes.get('id', None), self, attributes)
 		elif entity_type==etype.CAMPAIGN:
