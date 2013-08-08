@@ -417,8 +417,12 @@ def import_contact_email(civicrm, record_source, parameters=dict()):
 	Expects the fields:
 	"email", "location_type"
 	and identification ('id', 'external_identifier', 'contact_id')
+
+	parameters:
+	 multiple:	'allow' - allows multiple emails per type
 	"""
 	_prepare_parameters(parameters)
+	multiple = parameters.get('multiple', False)
 	for record in record_source:
 		timestamp = time.time()
 		record['contact_id'] = civicrm.getContactID(record)
@@ -442,24 +446,44 @@ def import_contact_email(civicrm, record_source, parameters=dict()):
 					logging.WARN, 'importer', 'import_contact_email', 'Email', None, None, time.time()-timestamp)
 				continue
 
+		if multiple=='allow':
+			# allow multiple emails of the same type
+			emails = civicrm.getEmails(record['contact_id'], record['location_type_id'])
+			# check if it is already there...
+			already_there = False
+			for email in emails:
+				if record['email'].lower() == email.get('email').lower():
+					# it is already there
+					civicrm.log("No new emails for contact [%s]" % str(email.get('contact_id')),
+						logging.INFO, 'importer', 'import_contact_email', 'Email', email.get('id'), email.get('contact_id'), time.time()-timestamp)
+					already_there = True
+					break
 
-		number = civicrm.getEmail(record['contact_id'], record['location_type_id'])
-		if number:
-			del record['location_type']
-			del record['location_type_id']
-			del record['external_identifier']
-			changed = number.update(record, store=True)
-			if changed:
-				civicrm.log("Updated email address: %s" % str(number),
-					logging.INFO, 'importer', 'import_contact_email', 'Email', number.get('id'), record['contact_id'], time.time()-timestamp)
-			else:
-				civicrm.log("Nothing changed for phone number: %s" % str(number),
-					logging.INFO, 'importer', 'import_contact_email', 'Email', number.get('id'), record['contact_id'], time.time()-timestamp)
+			# nothing? then create new email record
+			if not already_there:
+				email = civicrm.createEmail(record['contact_id'], record['location_type_id'], record['email'])
+				civicrm.log("Added new email for contact [%s]" % str(email.get('contact_id')),
+					logging.INFO, 'importer', 'import_contact_email', 'Email', email.get('id'), email.get('contact_id'), time.time()-timestamp)
 
 		else:
-			number = civicrm.createEmail(record['contact_id'], record['location_type_id'], record['email'])
-			civicrm.log("Created email address: %s" % str(number),
-				logging.INFO, 'importer', 'import_contact_email', 'Email', number.get('id'), record['contact_id'], time.time()-timestamp)
+			# find and update/replace the email with the given contact
+			number = civicrm.getEmail(record['contact_id'], record['location_type_id'])
+			if number:
+				del record['location_type']
+				del record['location_type_id']
+				del record['external_identifier']
+				changed = number.update(record, store=True)
+				if changed:
+					civicrm.log("Updated email address: %s" % str(number),
+						logging.INFO, 'importer', 'import_contact_email', 'Email', number.get('id'), record['contact_id'], time.time()-timestamp)
+				else:
+					civicrm.log("Nothing changed for email: %s" % str(number),
+						logging.INFO, 'importer', 'import_contact_email', 'Email', number.get('id'), record['contact_id'], time.time()-timestamp)
+
+			else:
+				number = civicrm.createEmail(record['contact_id'], record['location_type_id'], record['email'])
+				civicrm.log("Created email address: %s" % str(number),
+					logging.INFO, 'importer', 'import_contact_email', 'Email', number.get('id'), record['contact_id'], time.time()-timestamp)
 
 
 def import_membership(civicrm, record_source, parameters=dict()):

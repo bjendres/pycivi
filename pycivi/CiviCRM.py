@@ -610,6 +610,29 @@ class CiviCRM:
 		return self._createEntity('Email', result['values'][0])
 
 
+	def getEmails(self, contact_id, location_type_id=None):
+		timestamp = time.time()
+		query = dict()
+		query['action']			 	= 'get'
+		query['entity'] 			= 'Email'
+		query['contact_id'] 		= contact_id
+		if location_type_id:
+			query['location_type_id'] 	= location_type_id
+
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+
+		emails = list()
+		for email_data in result['values']:
+			emails.append(self._createEntity('Email', email_data))
+
+		self.log("Found %d email addresses (type %s) for contact %s." % (len(emails), location_type_id, query.get('contact_id', 'n/a')),
+			logging.DEBUG, 'pycivi', 'get', 'Email', query.get('contact_id', None), None, time.time()-timestamp)
+
+		return emails
+
+
 	def createEmail(self, contact_id, location_type_id, email):
 		timestamp = time.time()
 		query = dict()
