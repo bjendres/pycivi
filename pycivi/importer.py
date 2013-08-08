@@ -99,12 +99,14 @@ def import_contributions(civicrm, record_source, parameters=dict()):
 
 	parameters['update_mode'] can be set to anything CiviCRM.createOrUpdate accepts
 	parameters['id'] can be set to the identifying field (e.g. 'external_identifier' or 'trxn_id')
+	parameters['campaign_identifier'] can be set to set to identify the campaign. Default is 'title'
 	parameters['fallback_contact'] can be set to  provide a default fallback contact ID (e.g. "Unkown Donor")
 	"""
 	_prepare_parameters(parameters)
 	timestamp = time.time()
 	entity_type = parameters.get('entity_type', 'Contribution')
 	update_mode = parameters.get('update_mode', 'update')
+	campaign_identifier = parameters.get('campaign_identifier', 'title')
 	for record in record_source:
 		update = dict(record)
 		# lookup contact_id
@@ -136,7 +138,7 @@ def import_contributions(civicrm, record_source, parameters=dict()):
 		# lookup campaign
 		if update.has_key('contribution_campaign'):
 			if update['contribution_campaign']:
-				update['contribution_campaign_id'] = civicrm.getCampaignID(update['contribution_campaign'])
+				update['contribution_campaign_id'] = civicrm.getCampaignID(update['contribution_campaign'], attribute_key=campaign_identifier)
 				if not update['contribution_campaign_id']:
 					civicrm.log(u"Campaign ID not found! No valid campaign specified in (%s)" % unicode(str(record), 'utf8'),
 						logging.WARN, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
@@ -636,11 +638,15 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
 			self.function = function
 			self.record_list = record_list
 			self.record_list_lock = record_list_lock
+			self.throttle = 0.1
 			self.start()
 
 		def run(self):
 			active = True
 			while active:
+				if self.throttle > 0:
+					time.sleep(self.throttle)
+
 				if record_list_lock:
 					record_list_lock.acquire()
 				
