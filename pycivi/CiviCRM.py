@@ -361,7 +361,7 @@ class CiviCRM:
 				logging.DEBUG, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
 		else:
 			field_id = result['values'][0]['id']
-			self.log(u"Custom field '%s' resolved to ID %s" % field_name,
+			self.log(u"Custom field '%s' resolved to ID %s" % (field_name, field_id),
 				logging.DEBUG, 'API', 'get', 'CustomField', field_id, None, time.time()-timestamp)
 
 		# store value
