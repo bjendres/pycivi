@@ -173,12 +173,8 @@ class CiviCRM:
 
 	
 
-	def getEntity(self, entity_type, attributes, primary_attributes=['external_identifier']):
+	def getEntity(self, entity_type, attributes, primary_attributes=['id','external_identifier']):
 		timestamp = time.time()
-		if attributes.has_key('id'):
-			return attributes['id']
-		elif attributes.has_key('contact_id'):
-			return attributes['contact_id']
 
 		query = dict()
 		first_key = None
@@ -664,6 +660,28 @@ class CiviCRM:
 		elif result['count']==0:
 			return None
 		return self._createEntity('Phone', result['values'][0])
+
+	def getPhoneNumbers(self, contact_id, location_type_id=None):
+		timestamp = time.time()
+		query = dict()
+		query['action']			 	= 'get'
+		query['entity'] 			= 'Phone'
+		query['contact_id'] 		= contact_id
+		if location_type_id:
+			query['location_type_id'] 	= location_type_id
+
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+
+		phones = list()
+		for phone_data in result['values']:
+			phones.append(self._createEntity('Phone', phone_data))
+
+		self.log("Found %d phone numbers (type %s) for contact %s." % (len(phones), location_type_id, query.get('contact_id', 'n/a')),
+			logging.DEBUG, 'pycivi', 'get', 'Phone', query.get('contact_id', None), None, time.time()-timestamp)
+
+		return phones
 
 	def createPhoneNumber(self, data):
 		timestamp = time.time()

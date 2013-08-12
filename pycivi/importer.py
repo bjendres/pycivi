@@ -339,8 +339,13 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
 	Expects the fields:
 	"phone", "phone_type", "location_type"
 	and identification ('id', 'external_identifier', 'contact_id')
+
+	parameters:
+	 multiple:	'allow' - allows multiple phone numbers per type
+
 	"""
 	_prepare_parameters(parameters)
+	multiple = parameters.get('multiple', False)
 	for record in record_source:
 		timestamp = time.time()
 		record['contact_id'] = civicrm.getContactID(record)
@@ -349,29 +354,63 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
 				logging.WARN, 'importer', 'import_contact_phone', 'Phone', None, None, time.time()-timestamp)
 			continue
 
-		try:
-			number = civicrm.getPhoneNumber(record)
-		except:
-			number = None
-			civicrm.logException("Exception while updating phone number for [%s]. Data was %s, exception: " % (record['contact_id'], str(record)),
-				logging.ERROR, 'importer', 'import_contact_phone', 'Phone', None, record['contact_id'], time.time()-timestamp)
+		# get the location type id
+		if (not record.has_key('location_type_id')):
+			location_type = record.get('location_type', parameters.get('location_type', 'Main'))
+			location_type_dict = _get_or_create_from_params('location_type_dict', parameters)
 
-		if number:
-			del record['location_type']
-			del record['phone_type']
-			del record['external_identifier']
-			changed = number.update(record, store=True)
-			if changed:
-				civicrm.log("Updated phone number: %s" % str(number),
-					logging.INFO, 'importer', 'import_contact_phone', 'Phone', number.get('id'), record['contact_id'], time.time()-timestamp)
+			if location_type_dict.has_key(location_type):
+				record['location_type_id'] = location_type_dict[location_type]
 			else:
-				civicrm.log("Nothing changed for phone number: %s" % str(number),
-					logging.INFO, 'importer', 'import_contact_phone', 'Phone', number.get('id'), record['contact_id'], time.time()-timestamp)
+				record['location_type_id'] = civicrm.getLocationTypeID(location_type)
+				location_type_dict[location_type] = record['location_type_id']
+			if not record['location_type_id']:
+				civicrm.log(u"Could not write contact phone number, location type %s could not be resolved" % location_type,
+					logging.WARN, 'importer', 'import_contact_phone', 'Phone', None, None, time.time()-timestamp)
+				continue
 
+		if multiple=='allow':
+			# allow multiple phone numbers of the same type
+			phone_numbers = civicrm.getPhoneNumbers(record['contact_id'], record['location_type_id'])
+			# check if it is already there...
+			already_there = False
+			for phone_number in phone_numbers:
+				if record['phone'].lower() == phone_number.get('phone').lower():
+					# it is already there
+					civicrm.log("No new phone numbers for contact [%s]" % str(phone_number.get('contact_id')),
+						logging.INFO, 'importer', 'import_contact_phone', 'Phone', phone_number.get('id'), phone_number.get('contact_id'), time.time()-timestamp)
+					already_there = True
+					break
+
+			# nothing? then create new phone_number record
+			if not already_there:
+				phone_number = civicrm.createPhoneNumber(record)
+				civicrm.log("Added new phone_number for contact [%s]" % str(phone_number.get('contact_id')),
+					logging.INFO, 'importer', 'import_contact_phone', 'Phone', phone_number.get('id'), phone_number.get('contact_id'), time.time()-timestamp)
 		else:
-			number = civicrm.createPhoneNumber(record)
-			civicrm.log("Created phone number: %s" % str(number),
-				logging.INFO, 'importer', 'import_contact_phone', 'Phone', number.get('id'), record['contact_id'], time.time()-timestamp)
+			try:
+				phone_number = civicrm.getPhoneNumber(record)
+			except:
+				phone_number = None
+				civicrm.logException("Exception while updating phone number for [%s]. Data was %s, exception: " % (record['contact_id'], str(record)),
+					logging.ERROR, 'importer', 'import_contact_phone', 'Phone', None, record['contact_id'], time.time()-timestamp)
+
+			if phone_number:
+				del record['location_type']
+				del record['phone_type']
+				del record['external_identifier']
+				changed = phone_number.update(record, store=True)
+				if changed:
+					civicrm.log("Updated phone number: %s" % str(phone_number),
+						logging.INFO, 'importer', 'import_contact_phone', 'Phone', phone_number.get('id'), record['contact_id'], time.time()-timestamp)
+				else:
+					civicrm.log("Nothing changed for phone number: %s" % str(phone_number),
+						logging.INFO, 'importer', 'import_contact_phone', 'Phone', phone_number.get('id'), record['contact_id'], time.time()-timestamp)
+
+			else:
+				phone_number = civicrm.createPhoneNumber(record)
+				civicrm.log("Added new phone_number for contact [%s]" % str(phone_number.get('contact_id')),
+					logging.INFO, 'importer', 'import_contact_phone', 'Phone', phone_number.get('id'), phone_number.get('contact_id'), time.time()-timestamp)
 
 
 def import_contact_greeting(civicrm, record_source, parameters=dict()):
