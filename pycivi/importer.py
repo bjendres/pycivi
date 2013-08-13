@@ -154,7 +154,6 @@ def import_contributions(civicrm, record_source, parameters=dict()):
 				logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
 			continue
 
-		#entity = civicrm.createOrUpdate(entity_type, update, update_mode, ['contribution_id', 'trxn_id'])
 		entity = civicrm.createOrUpdate(entity_type, update, update_mode, ['id', 'trxn_id'])
 		civicrm.log(u"Wrote contribution '%s'" % unicode(str(entity), 'utf8'),
 			logging.INFO, 'importer', 'import_contributions', 'Contribution', entity.get('id'), None, time.time()-timestamp)

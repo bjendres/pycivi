@@ -115,6 +115,10 @@ class CiviContributionEntity(CiviTaggableEntity):
 			# we have to submit the contact ID in any case, so that an activity can be produced!	
 			if not 'contact_id' in changed_attributes:
 				changed_attributes['contact_id'] = self.get('contact_id')
+			
+			# we have to submit the status ID, otherwise it will default regardless of the current status	
+			if not 'contribution_status_id' in changed_attributes:
+				changed_attributes['contribution_status_id'] = self.get('contribution_status_id')
 			return CiviTaggableEntity._storeChanges(self, changed_attributes)
 		return dict()
 
