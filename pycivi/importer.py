@@ -331,6 +331,90 @@ def import_contact_base(civicrm, record_source, parameters=dict()):
 			logging.INFO, 'importer', 'import_contact_base', 'Contact', entity.get('id'), None, time.time()-timestamp)
 
 
+def import_contact_website(civicrm, record_source, parameters=dict()):
+	"""
+	Imports contact web sites.
+
+	Expects the fields:
+	"url", "website_type"
+	and identification ('id', 'external_identifier', 'contact_id')
+
+	parameters:
+	 multiple:	'allow' - allows multiple phone numbers per type
+
+	"""
+	_prepare_parameters(parameters)
+	multiple = parameters.get('multiple', False)
+	for record in record_source:
+		timestamp = time.time()
+		record['contact_id'] = civicrm.getContactID(record)
+		if not record['contact_id']:
+			civicrm.log(u"Could not write contact website, contact not found for '%s'" % str(record),
+				logging.WARN, 'importer', 'import_contact_website', 'Website', None, None, time.time()-timestamp)
+			continue
+
+		# get the website type id
+		if (not record.has_key('website_type_id')):
+			if record.has_key('website_type'):
+				if record['website_type']:
+					record['website_type_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('website_type'), record['website_type'])
+				del record['website_type']
+			
+		if (not record.has_key('website_type_id')):
+			civicrm.log(u"Could not write contact website, website type '%s' could not be resolved" % record.get('website_type', ''),
+				logging.WARN, 'importer', 'import_contact_website', 'Website', None, None, time.time()-timestamp)
+			continue
+
+
+		sites = civicrm.getWebsites(record['contact_id'], record['website_type_id'])
+
+		if multiple=='allow':
+			# allow multiple phone numbers of the same type
+
+			# check if it is already there...
+			already_there = False
+			for site in sites:
+				if record['url'].lower() == site.get('url').lower():
+					# it is already there
+					civicrm.log("No new websites for contact [%s]" % str(site.get('contact_id')),
+						logging.INFO, 'importer', 'import_contact_website', 'Website', site.get('id'), site.get('contact_id'), time.time()-timestamp)
+					already_there = True
+					break
+
+			# nothing? then create new phone_number record
+			if not already_there:
+				site = civicrm.createWebsite(record)
+				civicrm.log("Added new website for contact [%s]" % str(site.get('contact_id')),
+					logging.INFO, 'importer', 'import_contact_website', 'Website', site.get('id'), site.get('contact_id'), time.time()-timestamp)
+		
+		else:
+			if len(sites) > 0:
+				site = sites[0]
+			else:
+				site = None
+
+			if site:
+				del record['website_type']
+				del record['url']
+				del record['external_identifier']
+				changed = site.update(record, store=True)
+				if changed:
+					if len(sites) > 1:
+						civicrm.log("More than one website set, modified first...",
+							logging.WARN, 'importer', 'import_contact_website', 'Website', site.get('id'), record['contact_id'], time.time()-timestamp)
+					civicrm.log("Updated website: %s" % str(site),
+						logging.INFO, 'importer', 'import_contact_website', 'Website', site.get('id'), record['contact_id'], time.time()-timestamp)
+				else:
+					civicrm.log("Nothing changed for website: %s" % str(site),
+						logging.INFO, 'importer', 'import_contact_website', 'Website', site.get('id'), record['contact_id'], time.time()-timestamp)
+
+			else:
+				site = civicrm.createWebsite(record)
+				civicrm.log("Added new website for contact [%s]" % str(site.get('contact_id')),
+					logging.INFO, 'importer', 'import_contact_website', 'Website', site.get('id'), site.get('contact_id'), time.time()-timestamp)
+
+
+
 def import_contact_phone(civicrm, record_source, parameters=dict()):
 	"""
 	Imports contact phone numbers.

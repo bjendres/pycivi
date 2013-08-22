@@ -694,6 +694,38 @@ class CiviCRM:
 		return self._createEntity('Phone', result['values'][0])
 
 
+	def getWebsites(self, contact_id, website_type_id=None):
+		timestamp = time.time()
+		query = dict()
+		query['action']			 	= 'get'
+		query['entity'] 			= 'Website'
+		query['contact_id'] 		= contact_id
+		if website_type_id:
+			query['website_type_id'] 	= website_type_id
+
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+
+		sites = list()
+		for site_data in result['values']:
+			sites.append(self._createEntity('Website', site_data))
+
+		self.log("Found %d websites (type %s) for contact %s." % (len(sites), website_type_id, query.get('contact_id', 'n/a')),
+			logging.DEBUG, 'pycivi', 'get', 'Website', query.get('contact_id', None), None, time.time()-timestamp)
+
+		return sites
+
+	def createWebsite(self, data):
+		timestamp = time.time()
+		query = dict(data)
+		query['action'] = 'create'
+		query['entity'] = 'Website'
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+		return self._createEntity('Website', result['values'][0])
+
 	def getOrCreatePrefix(self, prefix_text):
 		"""
 		Looks up or creates the given individual prefix
