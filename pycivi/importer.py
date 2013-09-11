@@ -5,6 +5,8 @@ import threading
 import logging
 import time
 import traceback
+import datetime
+import sha
 
 class UTF8Recoder:
     """
@@ -255,12 +257,16 @@ def import_notes(civicrm, record_source, parameters=dict()):
 			primary_attributes = ['entity_id', 'entity_table', 'id']
 			if mode=='replace_subject':
 				primary_attributes.append('subject')
+			del record['lookup_identifier_key']
+			del record['lookup_identifier_value']
 			note = civicrm.createOrUpdate('Note', record, update_type='update', primary_attributes=primary_attributes)
 			civicrm.log("Created note: %s" % str(note),
 				logging.INFO, 'importer', 'import_notes', 'Note', note.get('id'), record['entity_id'], time.time()-timestamp)
 		except:
+			civicrm.logException()
 			civicrm.log("Failed to create note for entity: %s" % record['entity_id'],
 				logging.ERROR, 'importer', 'import_notes', 'Note', None, record['entity_id'], time.time()-timestamp)
+
 
 def import_contact_address(civicrm, record_source, parameters=dict()):
 	"""
@@ -702,18 +708,45 @@ def import_contact_groups(civicrm, record_source, parameters=dict()):
 
 def import_contact_tags(civicrm, record_source, parameters=dict()):
 	"""
+	Set set of tags for a contact
+	"""
+	parameters['entity_type'] = 'Contact'
+	parameters['entity_table'] = 'civicrm_contact'
+	parameters['key_fields'] = ['id', 'external_identifier']
+	return import_entity_tags(civicrm, record_source, parameters)
 
+
+def import_entity_tags(civicrm, record_source, parameters=dict()):
+	"""
+	(Un)set a set of tags for entities
 	"""
 	_prepare_parameters(parameters)
-	entity_type = parameters.get('entity_type', 'Contact')
+
+	entity_type = parameters.get('entity_type', None)
+	if not entity_type:
+		civicrm.log(u"Could not (un)tag entity, no entity_type given",
+			logging.WARN, 'importer', 'import_entity_tags', 'EntityTag', None, None, time.time()-timestamp)
+		return
+
+	entity_table = parameters.get('entity_table', None)
+	if not entity_table:
+		civicrm.log(u"Could not (un)tag entity, no entity_table given",
+			logging.WARN, 'importer', 'import_entity_tags', 'EntityTag', None, None, time.time()-timestamp)
+		return
+
 	key_fields = parameters.get('key_fields', ['id', 'external_identifier'])
 
+
 	for record in record_source:
-		contact_id = civicrm.getContactID(record)
-		if not contact_id:
-			civicrm.log("Contact not found: ID %s" % contact_id,
-				logging.WARN, 'importer', 'import_contact_tags', 'Contact', contact_id, None, 0)
-			continue
+		if entity_type=='Contact':
+			entity_id = civicrm.getContactID(record)
+			if not entity_id:
+				civicrm.log("Contact not found: ID %s" % entity_id,
+					logging.WARN, 'importer', 'import_contact_tags', 'Contact', entity_id, None, 0)
+				continue
+		else:
+			entity_id = civicrm.getEntityID(record, entity_type, key_fields)
+
 
 		tag_ids = parameters.get('tag_ids', None)
 		if tag_ids==None:	# GET THE TAG IDS!
@@ -728,12 +761,16 @@ def import_contact_tags(civicrm, record_source, parameters=dict()):
 					tag_id = civicrm.getOrCreateTagID(tag_name)
 					tag_ids[tag_name] = tag_id
 					civicrm.log("Tag '%s' has ID %s" % (tag_name, tag_id),
-						logging.INFO, 'importer', 'import_contact_tags', 'EntityTag', tag_id, None, 0)
+						logging.INFO, 'importer', 'import_entity_tags', 'EntityTag', tag_id, None, 0)
 				parameters['tag_ids'] = tag_ids
 			parameters_lock.notifyAll()
 			parameters_lock.release()
 
-		currentTags = civicrm.getContactTagIds(contact_id)
+		if entity_type=='Contact':
+			currentTags = civicrm.getContactTagIds(entity_id)
+		else:
+			currentTags = civicrm.getEntityTagIds(entity_id, entity_table)
+
 		tags2change = dict()
 		for tag_name in record.keys():
 			if not (tag_name in key_fields):
@@ -742,15 +779,145 @@ def import_contact_tags(civicrm, record_source, parameters=dict()):
 				if currentState != desiredState:
 					tags2change[tag_ids[tag_name]] = desiredState
 		if tags2change:
-			civicrm.log("Modifying tags for contact %s" % contact_id,
-				logging.INFO, 'importer', 'import_contact_tags', 'Contact', contact_id, None, 0)
+			civicrm.log("Modifying tags for %s [%s]" % (entity_type, entity_id),
+				logging.INFO, 'importer', 'import_entity_tags', 'EntityTag', entity_id, None, 0)
 			for tag_id in tags2change:
-				civicrm.tagContact(contact_id, tag_id, tags2change[tag_id])
+				if entity_type=='Contact':
+					civicrm.tagContact(entity_id, tag_id, tags2change[tag_id])
+				else:
+					civicrm.tagEntity(entity_id, entity_table, tag_id, tags2change[tag_id])
 		else:
-			civicrm.log("Tags are up to date for contact %s" % contact_id,
-				logging.INFO, 'importer', 'import_contact_tags', 'Contact', contact_id, None, 0)
+			civicrm.log("Tags are up to date for %s [%s]" % (entity_type, entity_id),
+				logging.INFO, 'importer', 'import_entity_tags', 'EntityTag', entity_id, None, 0)
 
 
+
+def import_sepa_mandates(civicrm, record_source, parameters=dict()):
+	"""
+	Will import SEPA mandates (for the sepa_dd extension).
+
+	Expected fields:
+	 (Mandate): "invoice_id", "reference", "date", "creditor_id", "iban", "bic", "type", "creation_date", "validation_date", "is_enabled"
+	 (Recurring Contribution): "is_email_receipt", "payment_instrument_id", "financial_type_id", "payment_processor_id", "auto_renew", "failure_count", "cycle_day", "is_test", "contribution_status_id", "trxn_id", "contact_id", "amount", "currency", "frequency_unit", "frequency_interval", "installments", "start_date", "create_date", "modified_date"
+
+	Need to be passed via parameters:
+	 sepa_creditor_id, payment_instrument_id, payment_processor_id
+
+	The importer will create a recurring contribution, the (first) associated contribution and finally the mandate.
+	In a last step, the mandate will be activated, if is_enabled==1
+	"""
+	mandate_keys = set(["invoice_id", "reference", "date", "creditor_id", "iban", "bic", "type", "creation_date", "validation_date"]) # "is_enabled", 
+	rcontrib_keys = set(["is_email_receipt", "payment_instrument_id", "financial_type_id", "payment_processor_id", "auto_renew", "failure_count", "cycle_day", "is_test", "contribution_status_id", "trxn_id", "contact_id", "amount", "currency", "frequency_unit", "frequency_interval", "installments", "start_date", "create_date", "modified_date"])
+	contrib_keys = set(["contact_id", "financial_type_id", "contribution_page_id", "payment_instrument_id", "total_amount", "non_deductible_amount", "fee_amount", "net_amount", "trxn_id", "invoice_id", "currency", "cancel_date", "cancel_reason", "receipt_date", "thankyou_date", "source", "amount_level", "honor_contact_id", "is_test", "is_pay_later", "honor_type_id", "address_id", "check_number", "campaign_id"]) # contribution_recur_id, contribution_status_id
+
+	# perform some sanity checks
+	if not parameters.has_key('sepa_creditor_id'): 
+		civicrm.log("No sepa_creditor_id specified for import.",
+			logging.ERROR, 'importer', 'import_sepa_mandates', 'SepaMandate', None, None, 0)
+		return
+	if not parameters.has_key('payment_instrument_id'): 
+		civicrm.log("No payment_instrument_id specified for import.",
+			logging.ERROR, 'importer', 'import_sepa_mandates', 'SepaMandate', None, None, 0)
+		return
+	if not parameters.has_key('payment_processor_id'): 
+		civicrm.log("No payment_processor_id specified for import.",
+			logging.ERROR, 'importer', 'import_sepa_mandates', 'SepaMandate', None, None, 0)
+		return
+
+
+	for record in record_source:
+		# first: find contact
+		timestamp = time.time()
+		contact_id = civicrm.getContactID(record)
+		if not contact_id:
+			civicrm.log("Contact not found: ID %s" % contact_id,
+				logging.WARN, 'importer', 'import_sepa_mandates', 'Contact', contact_id, None, 0)
+			continue
+
+		# split/prepare records
+		mandate_record = dict()
+		for key in (mandate_keys & set(record.keys())):
+			mandate_record[key] = record[key]
+		mandate_record['entity_table'] = 'civicrm_contribution_recur'
+		mandate_record['creditor_id'] = parameters['sepa_creditor_id']
+		mandate_record['contact_id'] = contact_id
+		mandate_record['date'] = mandate_record.get('date', str(datetime.datetime.now()).split(' ')[0])
+		mandate_record['is_enabled'] = 0
+
+		rcontrib_record = dict()
+		for key in (rcontrib_keys & set(record.keys())):
+			rcontrib_record[key] = record[key]
+		rcontrib_record['entity_record'] = rcontrib_record.get('entity_record', 0)
+		rcontrib_record['is_email_receipt'] = rcontrib_record.get('is_email_receipt', 0)
+		rcontrib_record['is_test'] = rcontrib_record.get('is_test', 0)
+		rcontrib_record['contact_id'] = contact_id
+		rcontrib_record['payment_instrument_id'] = parameters['payment_instrument_id']
+		rcontrib_record['payment_processor_id'] = parameters['payment_processor_id']
+		rcontrib_record['modified_date'] = rcontrib_record.get('modified_date', str(datetime.datetime.now()).split(' ')[0])
+
+		contrib_record = dict()
+		for key in (contrib_keys & set(record.keys())):
+			contrib_record[key] = record[key]
+		contrib_record['contact_id'] = contact_id
+		contrib_record['total_amount'] = record['amount']
+		contrib_record['non_deductible_amount'] = record['amount']
+		contrib_record['payment_instrument_id'] = parameters['payment_instrument_id']
+		contrib_record['payment_processor_id'] = parameters['payment_processor_id']
+		contrib_record['receive_date'] = rcontrib_record['start_date']
+
+		# then, see if we already have a mandate
+		mandate = civicrm.getEntity('SepaMandate', mandate_record, ['reference'])
+		if not mandate:
+			civicrm.log("Creating new mandate '%s'..." % mandate_record['reference'],
+				logging.INFO, 'importer', 'import_sepa_mandates', 'SepaMandate', None, None, 0)
+			# to create a mandate, first create a recurring contribution
+			hashv = sha.new(str(rcontrib_record)).hexdigest()
+			if not 'trxn_id' in rcontrib_record:
+				rcontrib_record['trxn_id'] = hashv
+			if not 'invoice_id' in rcontrib_record:
+				rcontrib_record['invoice_id'] = hashv
+		else:
+			civicrm.log("Updating existing mandate '%s' [%s]..." % (mandate_record['reference'], mandate.get('id')),
+				logging.INFO, 'importer', 'import_sepa_mandates', 'SepaMandate', mandate.get('id'), None, 0)
+			rcontrib_record['id'] = mandate.get('entity_id')
+
+		# first create (or update) the recurring contribution
+		timestamp_r = time.time()
+		rcontrib = civicrm.createOrUpdate('ContributionRecur', rcontrib_record, 'update', ['contact_id', 'id', 'invoice_id'])	
+		mandate_record['entity_id'] = rcontrib.get('id')
+		civicrm.log("Created or updated associated recurring contribution [%s]" % rcontrib.get('id'),
+			logging.INFO, 'importer', 'import_sepa_mandates', 'SepaMandate', rcontrib.get('id'), None, time.time()-timestamp_r)
+
+		# then, create (or update) the first contribution is there
+		timestamp_c = time.time()
+		contrib_record['contribution_recur_id'] = rcontrib.get('id')
+		contrib_record['invoice_id'] = rcontrib.get('invoice_id')
+		contrib = civicrm.createOrUpdate('Contribution', contrib_record, 'update', ['invoice_id', 'contribution_recur_id'])
+		civicrm.log("Created or updated associated (first) contribution [%s]" % contrib.get('id'),
+			logging.INFO, 'importer', 'import_sepa_mandates', 'SepaMandate', contrib.get('id'), rcontrib.get('id'), time.time()-timestamp_c)
+
+		# then create (or update) the mandate
+		timestamp_m = time.time()
+		if mandate:
+			mandate.update(mandate_record, True)
+			civicrm.log("Updated mandate '%s' [%s]..." % (mandate_record['reference'], mandate.get('id')),
+				logging.INFO, 'importer', 'import_sepa_mandates', 'SepaMandate', contrib.get('id'), rcontrib.get('id'), time.time()-timestamp_m)
+		else:
+			mandate = civicrm.createEntity('SepaMandate', mandate_record)
+			civicrm.log("Created mandate '%s' [%s]..." % (mandate_record['reference'], mandate.get('id')),
+				logging.INFO, 'importer', 'import_sepa_mandates', 'SepaMandate', mandate.get('id'), None, time.time()-timestamp_m)
+
+		# finally, enable/disable the mandate in a separate step
+		if int(mandate.get('is_enabled'))!=int(record['is_enabled']):
+			if int(record['is_enabled']):
+				civicrm.log("Activating mandate '%s' [%s]..." % (mandate_record['reference'], mandate.get('id')),
+					logging.INFO, 'importer', 'import_sepa_mandates', 'SepaMandate', mandate.get('id'), None, 0)
+			else:
+				civicrm.log("Deactivating mandate '%s' [%s]..." % (mandate_record['reference'], mandate.get('id')),
+					logging.INFO, 'importer', 'import_sepa_mandates', 'SepaMandate', mandate.get('id'), None, 0)
+		mandate.update({'is_enabled': record['is_enabled']}, True)
+		civicrm.log("Done importing/updating mandate '%s' [%s]..." % (mandate_record['reference'], mandate.get('id')),
+			logging.INFO, 'importer', 'import_sepa_mandates', 'SepaMandate', mandate.get('id'), None, time.time()-timestamp)
 
 
 
@@ -809,6 +976,7 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
 				if record:
 					# execute standard function
 					try:
+						timestamp = time.time()
 						self.function(self.civicrm, [record], self.parameters)			
 					except:
 						civicrm.logException(u"Exception caught for '%s' on procedure '%s'. Exception was: " % (threading.currentThread().name, import_function.__name__),

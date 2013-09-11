@@ -101,6 +101,7 @@ class CiviPhoneEntity(CiviEntity):
 	def __str__(self):
 		return (u"%s:'%s' for contact [%s]" % (self.get('phone_type', "#"), self.get('phone'), self.get('contact_id'))).encode('utf8')
 
+
 class CiviCampaignEntity(CiviEntity):
 	def __str__(self):
 		return (u"Campaign (%s): \"%s\"" % (self.get('id'), self.get('title'))).encode('utf8')
@@ -122,3 +123,17 @@ class CiviContributionEntity(CiviTaggableEntity):
 			return CiviTaggableEntity._storeChanges(self, changed_attributes)
 		return dict()
 
+
+class CiviNoteEntity(CiviTaggableEntity):
+	def _storeChanges(self, changed_attributes):
+		if changed_attributes:
+			# we have to submit the entity_id
+			if not 'entity_id' in changed_attributes:
+				changed_attributes['entity_id'] = self.get('entity_id')
+
+			# ...and entity_table
+			if not 'entity_table' in changed_attributes:
+				changed_attributes['entity_table'] = self.get('entity_table')
+
+			return CiviTaggableEntity._storeChanges(self, changed_attributes)
+		return dict()

@@ -208,6 +208,20 @@ class CiviCRM:
 			return None
 
 
+	def createEntity(self, entity_type, attributes):
+		"""
+		simply creates a new entity of the given type
+		"""
+		timestamp = time.time()
+		query = dict(attributes)
+		query['action'] 			= 'create'
+		query['entity'] 			= entity_type
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+		return self._createEntity(entity_type, result['values'][0])
+
+
 	def createOrUpdate(self, entity_type, attributes, update_type='update', primary_attributes=[u'id', u'external_identifier']):
 		query = dict()
 		for key in primary_attributes: 
@@ -291,6 +305,41 @@ class CiviCRM:
 				logging.DEBUG, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
 			return 0
 
+	
+	def getEntityID(self, attributes, entity_type, primary_attributes):
+		timestamp = time.time()
+		if attributes.has_key('id'):
+			return attributes['id']
+		
+		query = dict()
+		first_key = None
+		for key in primary_attributes: 
+			if attributes.has_key(key):
+				query[key] = attributes[key]
+				if first_key==None:
+					first_key = attributes[key]
+		if not len(query) > 0:
+			self.log("No primary key provided with entity '%s'." % str(attributes),
+				logging.DEBUG, 'pycivi', 'get', 'Entity', first_key, None, time.time()-timestamp)
+			return 0
+
+		query['entity'] = entity_type
+		query['action'] = 'get'
+		query['return'] = 'id'
+
+		result = self.performAPICall(query)
+		if result['count']>1:
+			self.log("Query result not unique, please provide a unique query for 'getOrCreate'.",
+				logging.WARN, 'pycivi', 'get', 'Entity', first_key, None, time.time()-timestamp)
+			raise CiviAPIException("Query result not unique, please provide a unique query for 'getOrCreate'.")
+		elif result['count']==1:
+			entity_id = result['values'][0]['id']
+			self.log("Entity ID resolved.",
+				logging.DEBUG, 'pycivi', 'get', 'Entity', first_key, None, time.time()-timestamp)
+			return entity_id
+		self.log("Entity not found.",
+			logging.DEBUG, 'pycivi', 'get', 'Entity', first_key, None, time.time()-timestamp)
+		return 0
 
 	def getCampaignID(self, attribute_value, attribute_key='title'):
 		"""
@@ -816,9 +865,30 @@ class CiviCRM:
 
 
 	def getContactTagIds(self, entity_id):
+		# TODO: can it be safely replace by
+		#    return self.getEntityTagIds(entity_id, 'civicrm_contact')
 		query = { 'entity': 'EntityTag',
 				  'contact_id' : entity_id,
 				  'action' : 'get',
+				  }
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+		else:
+			count = result['count']
+			tags = set()
+			for entry in result['values']:
+				tags.add(entry['tag_id'])
+			if len(tags)!=count:
+				raise CiviAPIException("Error: tag count does not match number of delivered tags!")
+			return tags
+
+
+	def getEntityTagIds(self, entity_id, entity_table):
+		query = { 'entity': 		'EntityTag',
+				  'entity_id' : 	entity_id,
+				  'entity_table' : 	entity_table,
+				  'action' : 		'get',
 				  }
 		result = self.performAPICall(query)
 		if result['is_error']:
@@ -849,6 +919,8 @@ class CiviCRM:
 
 
 	def tagContact(self, entity_id, tag_id, value=True):
+		# TODO: can it safely be replaced by
+		#	self.tagEntity(entity_id, 'cvicirm_contact', tag_id, value)
 		timestamp = time.time()
 		query = { 'entity': 'EntityTag',
 				  'contact_id' : entity_id,
@@ -869,6 +941,31 @@ class CiviCRM:
 				logging.INFO, 'pycivi', query['action'], 'EntityTag', entity_id, tag_id, time.time()-timestamp)
 		else:
 			self.log("No tags changed for contact#%s" % entity_id,
+				logging.DEBUG, 'pycivi', query['action'], 'EntityTag', entity_id, tag_id, time.time()-timestamp)
+
+
+	def tagEntity(self, entity_id, entity_table, tag_id, value=True):
+		timestamp = time.time()
+		query = { 'entity': 		'EntityTag',
+				  'entity_id': 		entity_id,
+				  'entity_table': 	entity_table,
+				  'tag_id': 		tag_id,
+				  }
+		if value:
+			query['action'] = 'create'
+		else:
+			query['action'] = 'delete'
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+		elif result.get('added', False):
+			self.log("Added new tag(%s) to entity #%s" % (tag_id, entity_id),
+				logging.INFO, 'pycivi', query['action'], 'EntityTag', entity_id, tag_id, time.time()-timestamp)
+		elif result.get('removed', False):
+			self.log("Removed tag(%s) from entity #%s" % (tag_id, entity_id),
+				logging.INFO, 'pycivi', query['action'], 'EntityTag', entity_id, tag_id, time.time()-timestamp)
+		else:
+			self.log("No tags changed for entity #%s" % entity_id,
 				logging.DEBUG, 'pycivi', query['action'], 'EntityTag', entity_id, tag_id, time.time()-timestamp)
 
 
@@ -907,6 +1004,8 @@ class CiviCRM:
 			return CiviPhoneEntity(entity_type, attributes.get('id', None), self, attributes)
 		elif entity_type==etype.CAMPAIGN:
 			return CiviCampaignEntity(entity_type, attributes.get('id', None), self, attributes)
+		elif entity_type==etype.NOTE:
+			return CiviNoteEntity(entity_type, attributes.get('id', None), self, attributes)
 		else:
 			return CiviEntity(entity_type, attributes.get('id', None), self, attributes)
 
