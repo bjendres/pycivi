@@ -420,9 +420,12 @@ class CiviCRM:
 		return field_id
 
 
-	def setCustomFieldID(self, entity_id, field_name, value):
+	def setCustomFieldOptionValue(self, entity_id, field_name, value, entity_type='Contact', create_option_value_if_not_exists=True):
 		"""
-		Get the ID for a given custom field
+		Sets a custom field's option value
+
+		Option Value custom fields (values selected from predefined set) are special,
+		 we have to look up the custom field, and then the option group values.
 		"""
 		timestamp = time.time()
 		field_id = self.getCustomFieldID(field_name)
@@ -431,37 +434,84 @@ class CiviCRM:
 				logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
 			return
 
+		# get the associated option group id
+		if self.lookup_cache.has_key('custom_field_optiongroup') and self.lookup_cache['custom_field_optiongroup'].has_key(field_name):
+			option_group_id = self.lookup_cache['custom_field_optiongroup'][field_name]
+		else:
+			query = dict()
+			query['entity'] = 'CustomField'
+			query['action'] = 'get'
+			query['id'] = field_id
+
+			result = self.performAPICall(query)
+			option_group_id = 0
+			if result['is_error']:
+				raise CiviAPIException(result['error_message'])
+			if result['count']>1:
+				self.log(u"More than one custom field found with name '%s'!" % field_name,
+					logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
+			elif result['count']==0:
+				self.log(u"Custom field '%s' does not exist." % field_name,
+					logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
+			elif not result['values'][0].has_key('option_group_id'):
+				self.log(u"Custom field '%s' is not a option_value type field." % field_name,
+					logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
+			else:
+				option_group_id = result['values'][0]['option_group_id']
+				self.log(u"Custom field '%s' resolved to ID %s" % (field_name, field_id),
+					logging.DEBUG, 'API', 'get', 'CustomField', field_id, None, time.time()-timestamp)
+
+			# store value
+			self.lookup_cache_lock.acquire()
+			if not self.lookup_cache.has_key('custom_field'):
+				self.lookup_cache['custom_field'] = dict()
+			self.lookup_cache['custom_field'][field_name] = field_id
+			self.lookup_cache_lock.notifyAll()
+			self.lookup_cache_lock.release()
+
+		if not option_group_id:
+			self.log(u"Custom field '%s' cannot be set. Either not found or not a custom_value type." % field_name,
+				logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
+			return
+
+		# now that we have the option_group_id, check, if it's already there
+		option_value_id = self.getOptionValueID(option_group_id, value)
+		if (not option_value_id) and create_option_value_if_not_exists:
+			# this option value does not exist yet => create!
+			option_value_id = self.setOptionValue(option_group_id, value, attributes={'value': value, 'label': value})
+
+		if not option_value_id:
+			self.log(u"Custom field '%s' cannot be set. There is no predefined option for value '%s'" % (field_name, value),
+				logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
+			return
+
+		# now we have option_group_id and option_value_id, we can *finally* set the custom field
+		self.setCustomFieldValue(entity_id, field_name, value, entity_type)
+
+
+	def setCustomFieldValue(self, entity_id, field_name, value, entity_type='Contact'):
+		"""
+		Sets a custom field's value
+		"""
+		timestamp = time.time()
+		field_id = self.getCustomFieldID(field_name, entity_type)
+		if not field_id:
+			self.log(u"Custom field '%s' does not exist." % field_name,
+				logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
+			return
+
+		# now we have option_group_id and option_value_id, we can *finally* set the custom field
 		query = dict()
 		query['entity'] = 'CustomValue'
-		query['action'] = 'get'
+		query['action'] = 'create'
 		query['entity_id'] = entity_id
-		query['label'] = field_name
-
+		query['custom_%s' % field_id] = value
 		result = self.performAPICall(query)
 		if result['is_error']:
 			raise CiviAPIException(result['error_message'])
-		if result['count']>1:
-			field_id = 0
-			self.log(u"More than one custom field found with name '%s'!" % field_name,
-				logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
-		elif result['count']==0:
-			field_id = 0
-			self.log(u"Custom field '%s' does not exist." % field_name,
-				logging.DEBUG, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
-		else:
-			field_id = result['values'][0]['id']
-			self.log(u"Custom field '%s' resolved to ID %s" % (field_name, field_id),
-				logging.DEBUG, 'API', 'get', 'CustomField', field_id, None, time.time()-timestamp)
-
-		# store value
-		self.lookup_cache_lock.acquire()
-		if not self.lookup_cache.has_key('custom_field'):
-			self.lookup_cache['custom_field'] = dict()
-		self.lookup_cache['custom_field'][field_name] = field_id
-		self.lookup_cache_lock.notifyAll()
-		self.lookup_cache_lock.release()
-
-		return field_id
+		self.log(u"Set custom field '%s' to value '%s'" % (field_name, value),
+			logging.DEBUG, 'API', 'get', 'CustomField', field_id, None, time.time()-timestamp)
+		return
 
 
 	def getOptionGroupID(self, group_name):
