@@ -259,7 +259,14 @@ def import_notes(civicrm, record_source, parameters=dict()):
 				primary_attributes.append('subject')
 			del record['lookup_identifier_key']
 			del record['lookup_identifier_value']
-			note = civicrm.createOrUpdate('Note', record, update_type='update', primary_attributes=primary_attributes)
+			del record['lookup_type']
+			try:
+				note = civicrm.createOrUpdate('Note', record, update_type='update', primary_attributes=primary_attributes)
+			except CiviAPIException as ex:
+				civicrm.log("Failed to create/update note. Please make sure that GET/POST parameter length (e.g. PHP's suhosin.get.max_value_length) is greater than %d" % len(record['note']), 
+					logging.ERROR, 'importer', 'import_notes', 'Note', None, None, time.time()-timestamp)
+				raise ex
+
 			civicrm.log("Created note: %s" % str(note),
 				logging.INFO, 'importer', 'import_notes', 'Note', note.get('id'), record['entity_id'], time.time()-timestamp)
 		except:
