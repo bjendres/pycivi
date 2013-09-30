@@ -634,6 +634,12 @@ def import_membership(civicrm, record_source, parameters=dict()):
 	and identification ('id', 'external_identifier', 'contact_id')
 	"""
 	_prepare_parameters(parameters)
+	membership_primary_attributes=[u'contact_id']
+	if parameters.has_key('multiple') and parameters['multiple']:
+		# multiple means, that we allow multiple membership types per contact
+		membership_primary_attributes.append(u'membership_type_id')
+		membership_primary_attributes.append(u'membership_type')
+
 	for record in record_source:
 		timestamp = time.time()
 		record['contact_id'] = civicrm.getContactID(record)
@@ -654,7 +660,7 @@ def import_membership(civicrm, record_source, parameters=dict()):
 			del record['status']
 
 		try:
-			membership = civicrm.createOrUpdate('Membership', record, update_type='update', primary_attributes=[u'contact_id'])
+			membership = civicrm.createOrUpdate('Membership', record, update_type='update', primary_attributes=membership_primary_attributes)
 			civicrm.log("Created membership: %s" % str(membership),
 				logging.INFO, 'importer', 'import_membership', 'Membership', membership.get('id'), record['contact_id'], time.time()-timestamp)
 		except:
