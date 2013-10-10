@@ -257,9 +257,9 @@ def import_notes(civicrm, record_source, parameters=dict()):
 			primary_attributes = ['entity_id', 'entity_table', 'id']
 			if mode=='replace_subject':
 				primary_attributes.append('subject')
-			del record['lookup_identifier_key']
-			del record['lookup_identifier_value']
-			del record['lookup_type']
+			record.pop('lookup_identifier_key', None)
+			record.pop('lookup_identifier_value', None)
+			record.pop('lookup_type', None)
 			try:
 				note = civicrm.createOrUpdate('Note', record, update_type='update', primary_attributes=primary_attributes)
 			except CiviAPIException as ex:

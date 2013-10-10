@@ -250,7 +250,10 @@ class CiviCRM:
 				result = self.performAPICall(query)
 				if result['is_error']:
 					raise CiviAPIException(result['error_message'])
-				return self._createEntity(entity_type, result['values'][0])
+				if type(result['values'])==dict:
+					return self._createEntity(entity_type, result['values'][str(result['id'])])
+				else:
+					return self._createEntity(entity_type, result['values'][0])	
 
 
 	###########################################################################

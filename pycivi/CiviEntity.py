@@ -1,3 +1,4 @@
+import logging
 
 class CiviEntity:
 	def __init__(self, entity_type, entity_id, civicrm, attributes=dict()):
@@ -14,6 +15,9 @@ class CiviEntity:
 
 	def getInt(self, attribute_key):
 		return int(self.attributes.get(attribute_key, -1))
+
+	def set(self, attribute_key, new_value):
+		self.attributes[attribute_key] = new_value
 
 	def _storeChanges(self, changed_attributes):
 		if changed_attributes:
@@ -82,9 +86,9 @@ class CiviEntity:
 			changes['action'] = 'create'
 			changes['id'] = self.attributes['id']
 			civi.performAPICall(changes)
-			civi.logger.info("Stored changes to '%s'" % str(self))
+			civi.log("Stored changes to '%s'" % unicode(str(self), 'utf8'), logging.INFO)
 		else:
-			civi.logger.info("No changes have been made, not storing '%s'" % str(self))
+			civi.log("No changes have been made, not storing '%s'" % unicode(str(self), 'utf8'), logging.INFO)
 
 
 
@@ -95,6 +99,39 @@ class CiviTaggableEntity(CiviEntity):
 class CiviContactEntity(CiviTaggableEntity):
 	def __str__(self):
 		return (u'%s [%s]' % (self.get('display_name'), self.get('id'))).encode('utf8')
+
+	def isType(self, type):
+		"""
+		test if the contact has a certain type
+		"""
+		return self.get('contact_type')==type
+
+	def convertToType(self, new_type):
+		"""
+		convert to another contact type. Returns True if successfull
+		"""
+		current_type = self.get('contact_type')
+		if current_type == new_type:
+			return True
+
+		if current_type == 'Individual':
+			if new_type == 'Organization':
+				# Conversion: Individual -> Organization
+				new_name = (self.get('first_name', '') + u' ' + self.get('last_name', '')).strip()
+				self.set('contact_type', 'Organization')
+				self.set('organization_name', new_name)
+				self.set('first_name', '')
+				self.set('last_name', '')
+				self.set('middle_name', '')
+				self.set('gender_id', '')
+				self.set('current_employer', '')
+				self.set('is_deceased', '')
+				self.set('birth_date', '')
+				self.set('job_title', '')
+				return True
+
+		self.civicrm.log("Unknown conversion '%s' => '%s'!" % (current_type, new_type), logging.ERROR)
+		return False
 
 
 class CiviPhoneEntity(CiviEntity):
