@@ -24,22 +24,24 @@ class CiviCRM_DRUSH(CiviCRM):
 		self.drush_path = os.path.expanduser(drush_path)
 		self.site = 'default'
 		self.non_parameters = set(['action', 'entity', 'key', 'api_key', 'sequential', 'json'])
-		print self.folder
 
 
 	def performAPICall(self, params=dict()):
 		timestamp = time.time()
 
 		# build call with parameters
-		call_params = [self.drush_path, '-r', self.folder, '-l', self.site, 'civicrm-api', '--out=json']
+		call_params = [self.drush_path, '-r', self.folder, '-l', self.site, 'civicrm-api', '--out=json', '--in=json']
 		call_params.append(params['entity'] + '.' + params['action'])
-		for param in params:
-			# FIXME: use --in=json via stdin!
-			if not param in self.non_parameters:
-				call_params.append(param + '=' + str(params[param]))
+		
+		# remove unsuitable parameters
+		for non_param in self.non_parameters:
+			params.pop(non_param, None)
+		query = json.dumps(params)
 
 		try:
-			reply = subprocess.check_output(call_params)
+			drush = subprocess.Popen(call_params, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.STDOUT)
+			reply = drush.communicate(input=query)[0]
+
 			self.log("API call completed - parameters: '%s'" % str(call_params), 
 				logging.DEBUG, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
 
