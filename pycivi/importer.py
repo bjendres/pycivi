@@ -510,6 +510,29 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
 					logging.INFO, 'importer', 'import_contact_phone', 'Phone', phone_number.get('id'), phone_number.get('contact_id'), time.time()-timestamp)
 
 
+def import_contact_prefix(civicrm, record_source, parameters=dict()):
+	"""
+	Imports contact prefixes
+
+	Expects the fields: "prefix" and identification ('id', 'external_identifier', 'contact_id')
+	"""
+	for record in record_source:
+		timestamp = time.time()
+		contact = civicrm.getEntity('Contact', record)
+		if not contact:
+			civicrm.log(u"Could not find contact with external id '%s'" % record['external_identifier'],
+			  logging.WARN, 'importer', 'import_contact_prefix', 'Contact', None, None, time.time()-timestamp)
+		else:
+			changed = contact.update(record, True)
+			if changed:
+				civicrm.log(u"Updated Title for '%s'" % unicode(str(contact), 'utf8'),
+				  logging.INFO, 'importer', 'import_contact_prefix', 'Contact', contact.get('id'), None, time.time()-timestamp)
+			else:
+				civicrm.log(u"Title for '%s' was up to date." % unicode(str(contact), 'utf8'),
+				  logging.INFO, 'importer', 'import_contact_prefix', 'Contact', contact.get('id'), None, time.time()-timestamp)
+
+
+
 def import_contact_greeting(civicrm, record_source, parameters=dict()):
 	"""
 	Imports contact greeting settings
@@ -530,11 +553,11 @@ def import_contact_greeting(civicrm, record_source, parameters=dict()):
 		update = dict(record)
 		if update.has_key('postal_greeting'):
 			if update['postal_greeting']:
-				update['postal_greeting_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('postal_greeting'), update['postal_greeting'])
+				update['postal_greeting_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('postal_greeting'), update['postal_greeting'])
 			del update['postal_greeting']
 		if update.has_key('email_greeting'):
 			if update['email_greeting']:
-				update['email_greeting_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('email_greeting'), update['email_greeting'])
+				update['email_greeting_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('email_greeting'), update['email_greeting'])
 			del update['email_greeting']
 
 		changed = contact.update(update, True)
