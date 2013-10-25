@@ -513,8 +513,8 @@ class CiviCRM:
 		Get the ID for a given option value
 		"""
 		timestamp = time.time()
-		if self.lookup_cache.has_key('option_value') and self.lookup_cache['option_value'].has_key(option_group_id) and self.lookup_cache['option_value'][option_group_id].has_key(name):
-			return self.lookup_cache['option_value'][option_group_id][name]
+		if self.lookup_cache.has_key('option_value_id') and self.lookup_cache['option_value_id'].has_key(option_group_id) and self.lookup_cache['option_value_id'][option_group_id].has_key(name):
+			return self.lookup_cache['option_value_id'][option_group_id][name]
 
 		query = dict()
 		query['entity'] = 'OptionValue'
@@ -540,16 +540,58 @@ class CiviCRM:
 
 		# store value
 		self.lookup_cache_lock.acquire()
-		if not self.lookup_cache.has_key('option_value'):
-			self.lookup_cache['option_value'] = dict()
-		if not self.lookup_cache['option_value'].has_key(option_group_id):
-			self.lookup_cache['option_value'][option_group_id] = dict()			
-		self.lookup_cache['option_value'][option_group_id][name] = value_id
+		if not self.lookup_cache.has_key('option_value_id'):
+			self.lookup_cache['option_value_id'] = dict()
+		if not self.lookup_cache['option_value_id'].has_key(option_group_id):
+			self.lookup_cache['option_value_id'][option_group_id] = dict()			
+		self.lookup_cache['option_value_id'][option_group_id][name] = value_id
 		self.lookup_cache_lock.notifyAll()
 		self.lookup_cache_lock.release()
 
 		return value_id
 
+
+	def getOptionValue(self, option_group_id, name):
+		"""
+		Get the 'value' for a given option value
+		"""
+		timestamp = time.time()
+		if self.lookup_cache.has_key('option_value') and self.lookup_cache['option_value'].has_key(option_group_id) and self.lookup_cache['option_value'][option_group_id].has_key(name):
+			return self.lookup_cache['option_value'][option_group_id][name]
+
+		query = dict()
+		query['entity'] = 'OptionValue'
+		query['action'] = 'get'
+		query['name'] = name
+		query['option_group_id'] = option_group_id
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+		if result['count']>1:
+			value = 0
+			self.log("More than one value found with name '%s'!" % name,
+				logging.WARN, 'API', 'get', 'OptionValue', None, None, time.time()-timestamp)
+		elif result['count']==0:
+			value = 0
+			self.log("Value '%s' does not exist." % name,
+				logging.DEBUG, 'API', 'get', 'OptionValue', value, None, time.time()-timestamp)
+		else:
+			value = result['values'][0]['value']
+			self.log("Value '%s' resolved to ID %s" % (name, value),
+				logging.DEBUG, 'API', 'get', 'OptionValue', value, None, time.time()-timestamp)
+
+		# store value
+		self.lookup_cache_lock.acquire()
+		if not self.lookup_cache.has_key('option_value'):
+			self.lookup_cache['option_value'] = dict()
+		if not self.lookup_cache['option_value'].has_key(option_group_id):
+			self.lookup_cache['option_value'][option_group_id] = dict()			
+		self.lookup_cache['option_value'][option_group_id][name] = value
+		self.lookup_cache_lock.notifyAll()
+		self.lookup_cache_lock.release()
+
+		return value
+		
 
 	def setOptionValue(self, option_group_id, name, attributes=dict()):
 		"""
@@ -786,6 +828,11 @@ class CiviCRM:
 		Looks up or creates the given individual prefix
 		"""
 		timestamp = time.time()
+		if not prefix_text:
+			self.log("Will not create empty prefix (default)",
+				logging.WARN, 'pycivi', 'getOrCreatePrefix', 'OptionValue', None, None, time.time()-timestamp)
+			return
+
 		option_group = 'individual_prefix'
 		option_group_id = self.getOptionGroupID(option_group)
 		if not option_group_id:
