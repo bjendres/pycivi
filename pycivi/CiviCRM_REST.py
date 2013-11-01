@@ -11,6 +11,12 @@ import traceback
 from CiviEntity import *
 from CiviCRM import CiviCRM
 
+
+if requests.__version__ < '1.2.3':
+    print "ERROR: You need requests >= 1.2.3"
+    sys.exit(1)
+
+
 class CiviAPIException(Exception):
 	pass
 
