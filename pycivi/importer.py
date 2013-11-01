@@ -162,6 +162,74 @@ def import_contributions(civicrm, record_source, parameters=dict()):
 			logging.INFO, 'importer', 'import_contributions', 'Contribution', entity.get('id'), None, time.time()-timestamp)
 
 
+def import_rcontributions(civicrm, record_source, parameters=dict()):
+	"""
+	Imports recurring contributions
+
+	parameters['update_mode'] can be set to anything CiviCRM.createOrUpdate accepts
+	parameters['identification'] can be set to the identifying fields []
+	parameters['campaign_identifier'] can be set to set to identify the campaign. Default is 'title'
+	parameters['fallback_contact'] can be set to  provide a default fallback contact ID (e.g. "Unkown Donor")
+	"""
+	_prepare_parameters(parameters)
+	timestamp = time.time()
+	entity_type = parameters.get('entity_type', 'ContributionRecur')
+	update_mode = parameters.get('update_mode', 'update')
+	campaign_identifier = parameters.get('campaign_identifier', 'title')
+	identification = parameters.get('identification', ['id'])
+
+	for record in record_source:
+		update = dict(record)
+		# lookup contact_id
+		if update.has_key('contact_external_identifier'):
+			if update['contact_external_identifier']:
+				update['contact_id'] = civicrm.getContactID({'external_identifier': update['contact_external_identifier']})
+			del update['contact_external_identifier']
+		if not update.has_key('contact_id') or not update['contact_id']:
+
+			if parameters.has_key('fallback_contact'):
+				update['contact_id'] = parameters['fallback_contact']
+				civicrm.log(u"Contact not found! Will be attributed to fallback contact %s" % str(parameters['fallback_contact']),
+					logging.INFO, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
+			else:
+				civicrm.log(u"Contact not found! No valid contact reference specified in (%s)" % unicode(str(record), 'utf8'),
+					logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
+				continue
+		
+		# lookup payment type
+		if update.has_key('payment_instrument'):
+			if update['payment_instrument']:
+				update['payment_instrument_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('payment_instrument'), update['payment_instrument'])
+			del update['payment_instrument']
+		if not update.has_key('payment_instrument_id') or not update['payment_instrument_id']:
+			civicrm.log(u"Payment type ID not found! No valid payment type specified in (%s)" % unicode(str(record), 'utf8'),
+				logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
+			continue
+
+		# lookup campaign
+		if update.has_key('contribution_campaign'):
+			if update['contribution_campaign']:
+				update['contribution_campaign_id'] = civicrm.getCampaignID(update['contribution_campaign'], attribute_key=campaign_identifier)
+				if not update['contribution_campaign_id']:
+					civicrm.log(u"Campaign ID not found! No valid campaign specified in (%s)" % unicode(str(record), 'utf8'),
+						logging.WARN, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
+			del update['contribution_campaign']
+
+		# lookup contribution status
+		if update.has_key('contribution_status'):
+			if update['contribution_status']:
+				update['contribution_status_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('contribution_status'), update['contribution_status'])
+			del update['contribution_status']
+		if not update.has_key('contribution_status_id') or not update['contribution_status_id']:
+			civicrm.log(u"Contribution status ID not found! No valid contribution status specified in (%s)" % unicode(str(record), 'utf8'),
+				logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
+			continue
+
+		entity = civicrm.createOrUpdate(entity_type, update, update_mode, identification)
+		civicrm.log(u"Wrote recurring contribution '%s'" % unicode(str(entity), 'utf8'),
+			logging.INFO, 'importer', 'import_rcontributions', 'ContributionRecur', entity.get('id'), None, time.time()-timestamp)
+
+
 def import_campaigns(civicrm, record_source, parameters=dict()):
 	"""
 	Imports campaigns
