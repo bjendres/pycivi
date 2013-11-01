@@ -91,6 +91,11 @@ class CiviEntity:
 			civi.log("No changes have been made, not storing '%s'" % unicode(str(self), 'utf8'), logging.INFO)
 
 
+	def delete(self, civi=None):
+		if civi==None: civi = self.civicrm
+		civi.performAPICall({'entity':self.entity_type, 'action':'delete', 'id':self.attributes['id']})
+
+
 
 class CiviTaggableEntity(CiviEntity):
 	pass

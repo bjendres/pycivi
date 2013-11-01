@@ -828,7 +828,38 @@ def import_entity_tags(civicrm, record_source, parameters=dict()):
 				logging.INFO, 'importer', 'import_entity_tags', 'EntityTag', entity_id, None, 0)
 
 
+def import_delete_entity(civicrm, record_source, parameters=dict()):
+	"""
+	Will delete the given entity if identified
 
+	Parameters:
+		'entity_type'	- the entity type, default is Contact
+		'identifiers' 	- a list of column names that will be used to uniquely identify the
+							entity. Only attributes provided by the datasource will be taken into account
+		'silent' 		- if True, don't log error if not found
+	"""
+	_prepare_parameters(parameters)
+	timestamp = time.time()
+	entity_type = parameters.get('entity_type', 'Contact')
+	identifiers = parameters.get('identifiers', ['id', 'external_identifier'])
+	silent = parameters.get('silent', False)
+
+	for record in record_source:
+		# lookup contact_id
+		if record.has_key('contact_external_identifier'):
+			if record['contact_external_identifier']:
+				record['contact_id'] = civicrm.getContactID({'external_identifier': record['contact_external_identifier']})
+			del record['contact_external_identifier']
+
+		# first, find the entity
+		entity = civicrm.getEntity(entity_type, record, primary_attributes=identifiers)
+		if entity:
+			entity.delete()
+			civicrm.log(u"%s [%s] deleted." % (entity_type, entity.get('id')),
+				logging.INFO, 'importer', 'import_delete_entity', entity_type, None, None, time.time()-timestamp)
+		elif not silent:
+			civicrm.log(u"Couldn't find or identify entity to delete!",
+				logging.ERROR, 'importer', 'import_delete_entity', entity_type, None, None, time.time()-timestamp)
 
 
 
