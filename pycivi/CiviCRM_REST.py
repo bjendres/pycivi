@@ -12,9 +12,9 @@ from CiviEntity import *
 from CiviCRM import CiviCRM
 
 
-if requests.__version__ < '1.2.3':
-    print "ERROR: You need requests >= 1.2.3"
-    sys.exit(1)
+if requests.__version__ < '1.1.0':
+	print "ERROR: You need requests >= 1.1.0, you have %s." % requests.__version__
+	sys.exit(1)
 
 
 class CiviAPIException(Exception):
