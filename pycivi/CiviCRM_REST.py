@@ -7,14 +7,17 @@ import time
 import threading
 import os
 import traceback
+from distutils.version import LooseVersion
 
 from CiviEntity import *
 from CiviCRM import CiviCRM
 
 
-if requests.__version__ < '1.1.0':
-	print "ERROR: You need requests >= 1.1.0, you have %s." % requests.__version__
+if LooseVersion(requests.__version__) < LooseVersion('1.1.0'):
+	print "ERROR: You need requests >= 1.1.0"
+	print "You've got {0}".format(requests.__version__)
 	sys.exit(1)
+
 
 
 class CiviAPIException(Exception):
