@@ -628,6 +628,16 @@ def import_contact_greeting(civicrm, record_source, parameters=dict()):
 				update['email_greeting_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('email_greeting'), update['email_greeting'])
 			del update['email_greeting']
 
+		if not update['postal_greeting_id']:
+			civicrm.log(u"Couldn't identify postal greeting ID for contact '%s'" % unicode(str(contact), 'utf8'),
+				logging.WARN, 'importer', 'import_contact_greeting', 'Contact', None, None, time.time()-timestamp)
+			continue
+		if not update['email_greeting_id']:
+			civicrm.log(u"Couldn't identify email greeting ID for contact '%s'" % unicode(str(contact), 'utf8'),
+				logging.WARN, 'importer', 'import_contact_greeting', 'Contact', None, None, time.time()-timestamp)
+			continue
+
+
 		changed = contact.update(update, True)
 		if changed:
 			civicrm.log(u"Updated greeting settings for contact: %s" % unicode(str(contact), 'utf8'),

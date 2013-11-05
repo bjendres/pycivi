@@ -858,9 +858,9 @@ class CiviCRM:
 		"""
 		timestamp = time.time()
 		if postal:
-			option_group = 'email_greeting'
-		else:
 			option_group = 'postal_greeting'
+		else:
+			option_group = 'email_greeting'
 
 		option_group_id = self.getOptionGroupID(option_group)
 		if not option_group_id:
