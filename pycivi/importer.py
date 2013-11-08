@@ -131,7 +131,7 @@ def import_contributions(civicrm, record_source, parameters=dict()):
 		# lookup payment type
 		if update.has_key('payment_instrument'):
 			if update['payment_instrument']:
-				update['payment_instrument_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('payment_instrument'), update['payment_instrument'])
+				update['payment_instrument_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('payment_instrument'), update['payment_instrument'])
 			del update['payment_instrument']
 		if not update.has_key('payment_instrument_id') or not update['payment_instrument_id']:
 			civicrm.log(u"Payment type ID not found! No valid payment type specified in (%s)" % unicode(str(record), 'utf8'),
@@ -150,7 +150,7 @@ def import_contributions(civicrm, record_source, parameters=dict()):
 		# lookup contribution status
 		if update.has_key('contribution_status'):
 			if update['contribution_status']:
-				update['contribution_status_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('contribution_status'), update['contribution_status'])
+				update['contribution_status_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('contribution_status'), update['contribution_status'])
 			del update['contribution_status']
 		if not update.has_key('contribution_status_id') or not update['contribution_status_id']:
 			civicrm.log(u"Contribution status ID not found! No valid contribution status specified in (%s)" % unicode(str(record), 'utf8'),
@@ -199,7 +199,7 @@ def import_rcontributions(civicrm, record_source, parameters=dict()):
 		# lookup payment type
 		if update.has_key('payment_instrument'):
 			if update['payment_instrument']:
-				update['payment_instrument_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('payment_instrument'), update['payment_instrument'])
+				update['payment_instrument_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('payment_instrument'), update['payment_instrument'])
 			del update['payment_instrument']
 		if not update.has_key('payment_instrument_id') or not update['payment_instrument_id']:
 			civicrm.log(u"Payment type ID not found! No valid payment type specified in (%s)" % unicode(str(record), 'utf8'),
@@ -218,7 +218,7 @@ def import_rcontributions(civicrm, record_source, parameters=dict()):
 		# lookup contribution status
 		if update.has_key('contribution_status'):
 			if update['contribution_status']:
-				update['contribution_status_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('contribution_status'), update['contribution_status'])
+				update['contribution_status_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('contribution_status'), update['contribution_status'])
 			del update['contribution_status']
 		if not update.has_key('contribution_status_id') or not update['contribution_status_id']:
 			civicrm.log(u"Contribution status ID not found! No valid contribution status specified in (%s)" % unicode(str(record), 'utf8'),
@@ -247,7 +247,7 @@ def import_campaigns(civicrm, record_source, parameters=dict()):
 		# lookup campaign type
 		if update.has_key('campaign_type'):
 			if update['campaign_type']:
-				update['campaign_type_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('campaign_type'), update['campaign_type'])
+				update['campaign_type_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('campaign_type'), update['campaign_type'])
 			del update['campaign_type']
 		if not update.has_key('campaign_type_id') or not update['campaign_type_id']:
 			civicrm.log(u"Campaign type ID not identified! No valid campaign type specified in (%s)" % unicode(str(record), 'utf8'),
@@ -257,7 +257,7 @@ def import_campaigns(civicrm, record_source, parameters=dict()):
 		# lookup campaign status
 		if update.has_key('status'):
 			if update['status']:
-				update['status_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('campaign_status'), update['status'])
+				update['status_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('campaign_status'), update['status'])
 			del update['status']
 		if not update.has_key('campaign_type_id') or not update['campaign_type_id']:
 			civicrm.log(u"Campaign status ID not identified! No valid campaign status specified in (%s)" % unicode(str(record), 'utf8'),
@@ -439,7 +439,7 @@ def import_contact_website(civicrm, record_source, parameters=dict()):
 		if (not record.has_key('website_type_id')):
 			if record.has_key('website_type'):
 				if record['website_type']:
-					record['website_type_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('website_type'), record['website_type'])
+					record['website_type_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('website_type'), record['website_type'])
 				del record['website_type']
 			
 		if (not record.has_key('website_type_id')):

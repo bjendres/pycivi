@@ -70,7 +70,7 @@ def import_bank_accounts(civicrm, record_source, parameters=dict()):
 		account_reference_type = refs.keys()[0]
 		account_reference_data = dict()
 		account_reference_data['reference'] = refs[account_reference_type]
-		account_reference_data['reference_type_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('civicrm_banking.reference_types'), account_reference_type)
+		account_reference_data['reference_type_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('civicrm_banking.reference_types'), account_reference_type)
 		account_reference = civicrm.getEntity('BankingAccountReference', account_reference_data, ['reference','reference_type_id'])
 
 		if not account_reference:
@@ -111,7 +111,7 @@ def import_bank_accounts(civicrm, record_source, parameters=dict()):
 
 		# create/verify the references
 		for key in refs:
-			reference_type_id = civicrm.getOptionValueID(civicrm.getOptionGroupID('civicrm_banking.reference_types'), key)
+			reference_type_id = civicrm.getOptionValue(civicrm.getOptionGroupID('civicrm_banking.reference_types'), key)
 			if not reference_type_id:
 				civicrm.log("Reference type ID for '%s' not found! Ignored." % key,
 					logging.WARN, 'importer_banking', 'import_bank_accounts', 'BankingAccountReference', None, None, 0)

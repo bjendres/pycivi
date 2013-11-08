@@ -840,7 +840,7 @@ class CiviCRM:
 				logging.ERROR, 'pycivi', 'getOrCreatePrefix', 'OptionGroup', None, None, time.time()-timestamp)
 			return
 
-		greeting_id = self.getOptionValueID(option_group_id, prefix_text)
+		greeting_id = self.getOptionValue(option_group_id, prefix_text)
 		if greeting_id:
 			self.log("Prefix '%s' already exists [%s]" % (prefix_text, greeting_id),
 				logging.INFO, 'pycivi', 'getOrCreatePrefix', 'OptionValue', None, None, time.time()-timestamp)
@@ -868,7 +868,7 @@ class CiviCRM:
 				logging.ERROR, 'pycivi', 'getOrCreateGreeting', 'OptionGroup', None, None, time.time()-timestamp)
 			return
 
-		greeting_id = self.getOptionValueID(option_group_id, greeting_text)
+		greeting_id = self.getOptionValue(option_group_id, greeting_text)
 		if greeting_id:
 			self.log("Greeting '%s' already exists [%s]" % (greeting_text, greeting_id),
 				logging.INFO, 'pycivi', 'getOrCreateGreeting', 'OptionValue', None, None, time.time()-timestamp)
