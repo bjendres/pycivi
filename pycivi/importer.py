@@ -864,20 +864,25 @@ def import_entity_tags(civicrm, record_source, parameters=dict()):
 
 
 		tag_ids = parameters.get('tag_ids', None)
-		if tag_ids==None:	# GET THE TAG IDS!
+	 	allFound = False
+		if not tag_ids==None:
+			# find the tags
+			allFound = True
+			for tag_name in record.keys():
+				allFound &= (tag_name in tag_ids)
+
+		if not allFound:	# GET THE TAG IDS!
 			parameters_lock = parameters['lock']
 			parameters_lock.acquire()
 			# test again, maybe another thread already created them...
-			tag_ids = parameters.get('tag_ids', None)
-			if tag_ids==None:
-				# no? ok, then it's up to us to query the tag ids
-				tag_ids = dict()
-				for tag_name in record.keys():
-					tag_id = civicrm.getOrCreateTagID(tag_name)
-					tag_ids[tag_name] = tag_id
-					civicrm.log("Tag '%s' has ID %s" % (tag_name, tag_id),
-						logging.INFO, 'importer', 'import_entity_tags', 'EntityTag', tag_id, None, 0)
-				parameters['tag_ids'] = tag_ids
+			tag_ids = parameters.get('tag_ids', dict())
+			parameters['tag_ids'] = tag_ids
+			for tag_name in record.keys():
+				tag_id = civicrm.getOrCreateTagID(tag_name)
+				tag_ids[tag_name] = tag_id
+				civicrm.log("Tag '%s' has ID %s" % (tag_name, tag_id),
+					logging.INFO, 'importer', 'import_entity_tags', 'EntityTag', tag_id, None, 0)
+
 			parameters_lock.notifyAll()
 			parameters_lock.release()
 
