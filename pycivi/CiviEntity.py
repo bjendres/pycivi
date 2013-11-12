@@ -28,7 +28,7 @@ __license__     = "GPLv3"
 __maintainer__  = "Björn Endres"
 __email__       = "endres[at]systopia.de"
 
-
+import entity_type
 import logging
 
 class CiviEntity:
@@ -122,7 +122,7 @@ class CiviEntity:
 			civi.log("No changes have been made, not storing '%s'" % unicode(str(self), 'utf8'), logging.INFO)
 
 
-	def delete(self, civi=None):
+	def delete(self, final=True, civi=None):
 		if civi==None: civi = self.civicrm
 		civi.performAPICall({'entity':self.entity_type, 'action':'delete', 'id':self.attributes['id']})
 
@@ -141,6 +141,31 @@ class CiviContactEntity(CiviTaggableEntity):
 		test if the contact has a certain type
 		"""
 		return self.get('contact_type')==type
+
+	def delete(self, final=True, civi=None):
+		"""
+		deleting a contact can be more tricky than other entities...
+		"""
+		if civi==None: civi = self.civicrm
+		query = {'entity':self.entity_type, 'action':'delete', 'id':self.attributes['id']}
+		if final:
+			query['skip_undelete'] = 1
+
+			# make sure all pending contribtions get deleted....
+			keep_going = True
+			while keep_going:
+				keep_going = False
+				query_pending = {'entity':entity_type.CONTRIBUTION, 'action':'get', 'contact_id': self.get('id')}
+				pending_contributions = civi.performAPICall(query_pending)
+				for pending_contribution in pending_contributions['values']:
+					keep_going = True
+					entity = civi._createEntity(entity_type.CONTRIBUTION, pending_contribution)
+					print "Deleting related contribution", str(entity)
+					entity.delete()
+		
+		# now delte the contact
+		civi.performAPICall(query)
+
 
 	def convertToType(self, new_type):
 		"""

@@ -453,7 +453,7 @@ def import_contact_website(civicrm, record_source, parameters=dict()):
 	and identification ('id', 'external_identifier', 'contact_id')
 
 	parameters:
-	 multiple:	'allow' - allows multiple phone numbers per type
+	 multiple:	'allow' - allows multiple web sites
 
 	"""
 	_prepare_parameters(parameters)
@@ -482,7 +482,7 @@ def import_contact_website(civicrm, record_source, parameters=dict()):
 		sites = civicrm.getWebsites(record['contact_id'], record['website_type_id'])
 
 		if multiple=='allow':
-			# allow multiple phone numbers of the same type
+			# allow multiple web sites of the same type
 
 			# check if it is already there...
 			already_there = False
@@ -494,7 +494,7 @@ def import_contact_website(civicrm, record_source, parameters=dict()):
 					already_there = True
 					break
 
-			# nothing? then create new phone_number record
+			# nothing? then create new website record
 			if not already_there:
 				site = civicrm.createWebsite(record)
 				civicrm.log("Added new website for contact [%s]" % str(site.get('contact_id')),
@@ -955,17 +955,35 @@ def import_delete_entity(civicrm, record_source, parameters=dict()):
 	_prepare_parameters(parameters)
 	timestamp = time.time()
 	entity_type = parameters.get('entity_type', 'Contact')
-	identifiers = parameters.get('identifiers', ['id', 'external_identifier'])
+	identifiers = list(parameters.get('identifiers', ['id', 'external_identifier']))
 	silent = parameters.get('silent', False)
 
 	for record in record_source:
 		# lookup contact_id
-		if record.has_key('contact_external_identifier'):
-			if record['contact_external_identifier']:
-				record['contact_id'] = civicrm.getContactID({'external_identifier': record['contact_external_identifier']})
-			del record['contact_external_identifier']
+		for external_identifier in ['contact_external_identifier', 'external_identifier']:
+			if record.has_key(external_identifier):
+				if record[external_identifier]:
+					record['contact_id'] = civicrm.getContactID({'external_identifier': record[external_identifier]})
+				del record[external_identifier]			
+				if external_identifier in identifiers:
+					identifiers.remove(external_identifier)
+					identifiers.append('contact_id')
+				if not record['contact_id']:
+					civicrm.log(u"Couldn't find or identify related contact!",
+						logging.WARN, 'importer', 'import_delete_entity', entity_type, None, None, time.time()-timestamp)
+					continue
+
+		# lookup location_type
+		if record.has_key('location_type') and not record.has_key('location_type_id'):
+			record['location_type_id'] = civicrm.getLocationTypeID(record['location_type'])
+			del record['location_type']
+			if 'location_type' in identifiers:
+				identifiers.remove('location_type')
+				identifiers.append('location_type_id')
 
 		# first, find the entity
+		#print record
+		#print identifiers
 		entity = civicrm.getEntity(entity_type, record, primary_attributes=identifiers)
 		if entity:
 			entity.delete()
@@ -973,7 +991,7 @@ def import_delete_entity(civicrm, record_source, parameters=dict()):
 				logging.INFO, 'importer', 'import_delete_entity', entity_type, None, None, time.time()-timestamp)
 		elif not silent:
 			civicrm.log(u"Couldn't find or identify entity to delete!",
-				logging.ERROR, 'importer', 'import_delete_entity', entity_type, None, None, time.time()-timestamp)
+				logging.WARN, 'importer', 'import_delete_entity', entity_type, None, None, time.time()-timestamp)
 
 
 
