@@ -48,6 +48,8 @@ def import_bank_accounts(civicrm, record_source, parameters=dict()):
 	"""
 	Will import bank account references (for the CiviBanking extension)
 
+	CAUTION: Will only accept ONE account per contact, others will be overwritten
+
 	Expected fields:
 	 'id' (bank account) or 'contact_id' (contact) or 'external_identifier' (contact)
 	 'created_date'		- will be set as created date

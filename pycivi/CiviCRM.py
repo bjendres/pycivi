@@ -210,9 +210,16 @@ class CiviCRM:
 		for key in primary_attributes: 
 			if attributes.has_key(key):
 				query[key] = attributes[key]
-		query['entity'] = entity_type
-		query['action'] = 'get'
-		result = self.performAPICall(query)
+
+		if query:
+			# try to find the entity
+			query['entity'] = entity_type
+			query['action'] = 'get'
+			result = self.performAPICall(query)
+		else:
+			# if there are no criteria given, not results should be expected
+			result = {'count': 0}
+
 		if result['count']>1:
 			raise CiviAPIException("Query result not unique, please provide a unique query for 'getOrCreate'.")
 		else:
@@ -229,6 +236,7 @@ class CiviCRM:
 				return entity
 			else:
 				query.update(attributes)
+				query['entity'] = entity_type
 				query['action'] = 'create'
 				result = self.performAPICall(query)
 				if result['is_error']:
