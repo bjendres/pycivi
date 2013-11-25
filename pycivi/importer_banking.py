@@ -65,7 +65,9 @@ def import_bank_accounts(civicrm, record_source, parameters=dict()):
 	Parameters:
 	 'reference_mode'	- 'overwrite' = preexisting references will be deleted
 	 					- 'update'	  = only replace given references 
+	 'multiple_BAs'		- True		  = allow mutiple bank accounts per contact
 	"""
+	multiple_BAs = parameters.get('multiple_BAs', False)
 	for record in record_source:
 		if not record.has_key('id'):
 			# we'll have to look for an ID
@@ -105,8 +107,12 @@ def import_bank_accounts(civicrm, record_source, parameters=dict()):
 		account_reference = civicrm.getEntity('BankingAccountReference', account_reference_data, ['reference','reference_type_id'])
 
 		if not account_reference:
-			# create a new account
-			account = civicrm.createOrUpdate('BankingAccount', account_data, update_type='update', primary_attributes=[u'id', u'contact_id'])
+			if multiple_BAs:
+				# create a new account
+				account = civicrm.createEntity('BankingAccount', account_data)
+			else:
+				# update existing account (if present)
+				account = civicrm.createOrUpdate('BankingAccount', account_data, update_type='update', primary_attributes=[u'id', u'contact_id'])
 
 			# adjust timestamps, if necessary (they get set automatically to "now" on creation)
 			timestamps = dict()
