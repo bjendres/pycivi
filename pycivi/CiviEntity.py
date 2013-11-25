@@ -47,7 +47,7 @@ class CiviEntity:
 	def getInt(self, attribute_key):
 		return int(self.attributes.get(attribute_key, -1))
 
-	def getID(self, attribute_key, default_value=None):
+	def getID(self):
 		return self.get('id')
 
 	def set(self, attribute_key, new_value):
