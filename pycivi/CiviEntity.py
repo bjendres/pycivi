@@ -218,6 +218,10 @@ class CiviContributionEntity(CiviTaggableEntity):
 			if not 'contact_id' in changed_attributes:
 				changed_attributes['contact_id'] = self.get('contact_id')
 			
+			# we also have to submit the currency in any case
+			if not 'currency' in changed_attributes:
+				changed_attributes['currency'] = self.get('currency')
+
 			# we have to submit the status ID, otherwise it will default regardless of the current status	
 			if not 'contribution_status_id' in changed_attributes:
 				changed_attributes['contribution_status_id'] = self.get('contribution_status_id')
