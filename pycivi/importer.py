@@ -659,10 +659,8 @@ def import_contact_greeting(civicrm, record_source, parameters=dict()):
 				update['email_greeting_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('email_greeting'), update['email_greeting'])
 			del update['email_greeting']
 
-		#FIXME: robinwood-import raised a KeyError for postal_greeting_id
-		#fixed this very roughly; please have a look...
-#		if not update['postal_greeting_id']:
-		if not update.has_key('postal_greeting_id') or not update['postal_greeting_id']:
+		# this should not even happen (see above), so NO IFs: if not update.has_key('postal_greeting_id') or not update['postal_greeting_id']:
+		if not update['postal_greeting_id']:
 			civicrm.log(u"Couldn't identify postal greeting ID for contact '%s'" % unicode(str(contact), 'utf8'),
 				logging.WARN, 'importer', 'import_contact_greeting', 'Contact', None, None, time.time()-timestamp)
 			continue
