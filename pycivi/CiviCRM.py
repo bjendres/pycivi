@@ -487,9 +487,9 @@ class CiviCRM:
 
 			# store value
 			self.lookup_cache_lock.acquire()
-			if not self.lookup_cache.has_key('custom_field'):
-				self.lookup_cache['custom_field'] = dict()
-			self.lookup_cache['custom_field'][field_name] = field_id
+			if not self.lookup_cache.has_key('custom_field_optiongroup'):
+				self.lookup_cache['custom_field_optiongroup'] = dict()
+			self.lookup_cache['custom_field_optiongroup'][field_name] = option_group_id
 			self.lookup_cache_lock.notifyAll()
 			self.lookup_cache_lock.release()
 
@@ -594,8 +594,8 @@ class CiviCRM:
 		if result['is_error']:
 			raise CiviAPIException(result['error_message'])
 		if result['count']>1:
-			value_id = 0
-			self.log("More than one value found with name '%s'!" % name,
+			value_id = result['values'][0]['id']
+			self.log("More than one value found with name '%s'! Using first one..." % name,
 				logging.WARN, 'API', 'get', 'OptionValue', None, None, time.time()-timestamp)
 		elif result['count']==0:
 			value_id = 0
