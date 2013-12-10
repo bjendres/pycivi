@@ -191,6 +191,36 @@ class CiviCRM:
 			return None
 
 
+	def getEntities(self, entity_type, attributes, primary_attributes=['id','external_identifier']):
+		timestamp = time.time()
+
+		query = dict()
+		first_key = None
+		for key in primary_attributes: 
+			if attributes.has_key(key):
+				query[key] = attributes[key]
+				if first_key==None:
+					first_key = attributes[key]
+		if not len(query) > 0:
+			self.log("No primary key provided with the following specs: '%s'." % str(attributes),
+				logging.WARN, 'pycivi', 'get', entity_type, first_key, None, time.time()-timestamp)
+			return []
+
+		query['entity'] = entity_type
+		query['action'] = 'get'
+		result = self.performAPICall(query)
+		if result['is_error']:
+			raise CiviAPIException(result['error_message'])
+
+		entities = list()
+		self.log("Entities found: %s" % result['count'],
+			logging.DEBUG, 'pycivi', 'get', entity_type, first_key, None, time.time()-timestamp)
+		for entity_data in result['values']:
+			entity = self._createEntity(entity_type, entity_data)
+			entities.append(entity)
+		return entities
+
+
 	def createEntity(self, entity_type, attributes):
 		"""
 		simply creates a new entity of the given type
@@ -1098,6 +1128,10 @@ class CiviCRM:
 			return CiviCampaignEntity(entity_type, attributes.get('id', None), self, attributes)
 		elif entity_type==etype.NOTE:
 			return CiviNoteEntity(entity_type, attributes.get('id', None), self, attributes)
+		elif entity_type==etype.RELATIONSHIP_TYPE:
+			return CiviRelationshipTypeEntity(entity_type, attributes.get('id', None), self, attributes)
+		elif entity_type==etype.ADDRESS:
+			return CiviAddressEntity(entity_type, attributes.get('id', None), self, attributes)
 		else:
 			return CiviEntity(entity_type, attributes.get('id', None), self, attributes)
 

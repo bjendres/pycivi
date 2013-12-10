@@ -259,3 +259,26 @@ class CiviNoteEntity(CiviTaggableEntity):
 
 			return CiviTaggableEntity._storeChanges(self, changed_attributes)
 		return dict()
+
+
+class CiviRelationshipTypeEntity(CiviEntity):
+	def createOrUpdateRelation(self, contact_a_id, contact_b_id, parameters=dict()):
+		'''
+		will create a relationship if it does not already exist
+		'''
+		parameters['contact_id_a'] = contact_a_id
+		parameters['contact_id_b'] = contact_b_id
+		parameters['relationship_type_id'] = self.getID()
+		relation = self.civicrm.createOrUpdate('Relationship', parameters, 'update', ['relationship_type_id', 'contact_id_a', 'contact_id_b'])
+
+
+class CiviAddressEntity(CiviEntity):
+	def shareWith(self, contact_id):
+		'''
+		share the address with the given contact
+		'''
+		new_address_data = dict(self.attributes)
+		new_address_data['master_id'] = self.getID()
+		new_address_data['contact_id'] = contact_id
+		del new_address_data['id']
+		return self.civicrm.createEntity(self.entity_type, new_address_data)
