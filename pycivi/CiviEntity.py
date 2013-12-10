@@ -194,6 +194,23 @@ class CiviContactEntity(CiviTaggableEntity):
 				self.set('job_title', '')
 				return True
 
+		elif current_type == 'Household':
+			if new_type == 'Individual':
+				# Conversion: Household -> Individual
+				self.set('contact_type', 'Individual')
+				self.set('first_name', '')
+				self.set('last_name', self.get('household_name'))
+				self.set('household_name', '')
+				self.set('primary_contact_id', '')
+				self.set('middle_name', '')
+				self.set('gender_id', '')
+				self.set('current_employer', '')
+				self.set('is_deceased', '')
+				self.set('birth_date', '')
+				self.set('job_title', '')
+				return True
+
+
 		self.civicrm.log("Unknown conversion '%s' => '%s'!" % (current_type, new_type), logging.ERROR)
 		return False
 
