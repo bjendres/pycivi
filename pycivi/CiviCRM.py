@@ -608,14 +608,15 @@ class CiviCRM:
 				logging.DEBUG, 'API', 'get', 'OptionValue', value_id, None, time.time()-timestamp)
 
 		# store value
-		self.lookup_cache_lock.acquire()
-		if not self.lookup_cache.has_key('option_value_id'):
-			self.lookup_cache['option_value_id'] = dict()
-		if not self.lookup_cache['option_value_id'].has_key(option_group_id):
-			self.lookup_cache['option_value_id'][option_group_id] = dict()			
-		self.lookup_cache['option_value_id'][option_group_id][name] = value_id
-		self.lookup_cache_lock.notifyAll()
-		self.lookup_cache_lock.release()
+		if value_id:
+			self.lookup_cache_lock.acquire()
+			if not self.lookup_cache.has_key('option_value_id'):
+				self.lookup_cache['option_value_id'] = dict()
+			if not self.lookup_cache['option_value_id'].has_key(option_group_id):
+				self.lookup_cache['option_value_id'][option_group_id] = dict()
+			self.lookup_cache['option_value_id'][option_group_id][name] = value_id
+			self.lookup_cache_lock.notifyAll()
+			self.lookup_cache_lock.release()
 
 		return value_id
 
