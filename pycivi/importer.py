@@ -659,7 +659,11 @@ def import_contact_greeting(civicrm, record_source, parameters=dict()):
 				update['email_greeting_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('email_greeting'), update['email_greeting'])
 			del update['email_greeting']
 
-		# this should not even happen (see above), so NO IFs: if not update.has_key('postal_greeting_id') or not update['postal_greeting_id']:
+		#even though it shouldn't happen, that there is no postal_greeting nor postal_greeting_id...
+		#it happens nevertheless
+		if not update.has_key('postal_greeting_id') and not update.has_key('postal_greeting'):
+			civicrm.log(u"Neither 'postal_greeting' nor 'postal_greeting_id' was set for contact '%s'" % unicode(str(contact), 'utf8'), logging.WARN, 'importer', 'import_contact_greeting', 'Contact', None, None, time.time()-timestamp)
+			continue
 		if not update['postal_greeting_id']:
 			civicrm.log(u"Couldn't identify postal greeting ID for contact '%s'" % unicode(str(contact), 'utf8'),
 				logging.WARN, 'importer', 'import_contact_greeting', 'Contact', None, None, time.time()-timestamp)
