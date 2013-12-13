@@ -451,7 +451,15 @@ class CiviCRM:
 		Option Value custom fields (values selected from predefined set) are special,
 		 we have to look up the custom field, and then the option group values.
 		"""
+
 		timestamp = time.time()
+
+		#value should not be an empty string
+		if not value:
+			self.log(u"OptionValue not set for field %s." % field_name,
+				logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
+			return
+
 		field_id = self.getCustomFieldID(field_name)
 		if not field_id:
 			self.log(u"Custom field '%s' does not exist." % field_name,

@@ -649,30 +649,19 @@ def import_contact_greeting(civicrm, record_source, parameters=dict()):
 				logging.WARN, 'importer', 'import_contact_greeting', 'Contact', None, None, time.time()-timestamp)
 			continue
 		
-		update = dict(record)
-		if update.has_key('postal_greeting'):
-			if update['postal_greeting']:
-				update['postal_greeting_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('postal_greeting'), update['postal_greeting'])
-			del update['postal_greeting']
-		if update.has_key('email_greeting'):
-			if update['email_greeting']:
-				update['email_greeting_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('email_greeting'), update['email_greeting'])
-			del update['email_greeting']
+		update = dict()
+		
+		for key in ['postal_greeting', 'email_greeting']:
+			if record.get(key, None):
+				key_id = civicrm.getOptionValue(
+					civicrm.getOptionGroupID(key),
+					record[key]
+					)
+				if key_id:
+					update[key + '_id'] = key_id
 
-		#even though it shouldn't happen, that there is no postal_greeting nor postal_greeting_id...
-		#it happens nevertheless
-		if not update.has_key('postal_greeting_id') and not update.has_key('postal_greeting'):
-			civicrm.log(u"Neither 'postal_greeting' nor 'postal_greeting_id' was set for contact '%s'" % unicode(str(contact), 'utf8'), logging.WARN, 'importer', 'import_contact_greeting', 'Contact', None, None, time.time()-timestamp)
-			continue
-		if not update['postal_greeting_id']:
-			civicrm.log(u"Couldn't identify postal greeting ID for contact '%s'" % unicode(str(contact), 'utf8'),
-				logging.WARN, 'importer', 'import_contact_greeting', 'Contact', None, None, time.time()-timestamp)
-			continue
-		if not update['email_greeting_id']:
-			civicrm.log(u"Couldn't identify email greeting ID for contact '%s'" % unicode(str(contact), 'utf8'),
-				logging.WARN, 'importer', 'import_contact_greeting', 'Contact', None, None, time.time()-timestamp)
-			continue
-
+			if record.get(key + '_custom', None):
+				update[key + '_custom'] = record[key + '_custom']
 
 		changed = contact.update(update, True)
 		if changed:
