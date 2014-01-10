@@ -1001,7 +1001,15 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
 	_prepare_parameters(parameters)
 	# if only on worker, just call directly
 	if workers==1:
-		import_function(civicrm, record_source, parameters)
+		for record in record_source:
+			try:
+				timestamp = time.time()
+				import_function(civicrm, [record], parameters)
+			except:
+				civicrm.logException(u"Exception caught for '%s' on procedure '%s'. Exception was: " % (threading.currentThread().name, import_function.__name__),
+					logging.ERROR, 'importer', import_function.__name__, None, None, None, time.time()-timestamp)
+				civicrm.log(u"Failed record was: %s" % str(record),
+					logging.ERROR, 'importer', import_function.__name__, None, None, None, time.time()-timestamp)
 		return
 
 	# multithreaded
