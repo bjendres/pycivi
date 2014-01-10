@@ -979,6 +979,14 @@ def import_delete_entity(civicrm, record_source, parameters=dict()):
 		#print record
 		#print identifiers
 		entity = civicrm.getEntity(entity_type, record, primary_attributes=identifiers)
+
+		#if entity_type is Contact and entity wasn't found we need a second
+		#lookup for deleted Contacts (dirty hack)
+		if entity_type == 'Contact' and not entity:
+			record['is_deleted'] = 1
+			identifiers.append('is_deleted')
+			entity = civicrm.getEntity(entity_type, record, primary_attributes=identifiers)
+
 		if entity:
 			entity.delete()
 			civicrm.log(u"%s [%s] deleted." % (entity_type, entity.get('id')),
