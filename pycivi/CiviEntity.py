@@ -282,3 +282,21 @@ class CiviAddressEntity(CiviEntity):
 		new_address_data['contact_id'] = contact_id
 		del new_address_data['id']
 		return self.civicrm.createEntity(self.entity_type, new_address_data)
+
+
+class CiviEmailEntity(CiviEntity):
+	# update all provided attributes.
+	# FIX for Civicrm-4.3.7:
+	# We need to provide all attributes of the entity for an update
+
+	def update(self, attributes, store=False):
+		changed = dict()
+		for key in attributes.keys():
+			if (self.attributes.get(key, None)!=attributes[key]):
+				self.attributes[key] = attributes[key]
+				changed[key] = self.attributes[key]
+		self.attributes.update(attributes)
+		if store:
+			self._storeChanges(self.attributes)
+		return changed
+

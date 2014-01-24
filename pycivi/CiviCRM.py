@@ -1141,6 +1141,8 @@ class CiviCRM:
 			return CiviRelationshipTypeEntity(entity_type, attributes.get('id', None), self, attributes)
 		elif entity_type==etype.ADDRESS:
 			return CiviAddressEntity(entity_type, attributes.get('id', None), self, attributes)
+		elif entity_type==etype.EMAIL:
+			return CiviEmailEntity(entity_type, attributes.get('id', None), self, attributes)
 		else:
 			return CiviEntity(entity_type, attributes.get('id', None), self, attributes)
 
