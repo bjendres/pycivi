@@ -762,6 +762,69 @@ class CiviCRM:
 		return status_id
 
 
+	def getMembershipTypeID(self, membership_type_name):
+		# first: look up in cache
+		if self.lookup_cache.has_key('membership_type2id') and self.lookup_cache['membership_type2id'].has_key(membership_type_name):
+			return self.lookup_cache['membership_type2id'][membership_type_name]
+
+		timestamp = time.time()
+		query = { 	'action': 'get',
+					'entity': 'MembershipType',
+					'name': membership_type_name }
+		result = self.performAPICall(query)
+		if result['count']>1:
+			self.log("Non-uniqe membership type name '%s'" % membership_type_name,
+				logging.WARN, 'API', 'get', 'MembershipType', None, None, time.time()-timestamp)
+			raise CiviAPIException("Non-uniqe membership type name '%s'" % membership_type_name)
+		elif result['count']==1:
+			type_id = result['values'][0]['id']
+			self.log("Membership type '%s' resolved to id %s." % (membership_type_name, type_id),
+				logging.DEBUG, 'API', 'get', 'MembershipType', type_id, None, time.time()-timestamp)
+		else:
+			type_id = 0
+			self.log("Membership type '%s' could NOT be resolved",
+				logging.DEBUG, 'API', 'get', 'MembershipTypes', None, None, time.time()-timestamp)
+
+		self.lookup_cache_lock.acquire()
+		if not self.lookup_cache.has_key('membership_type2id'):
+			self.lookup_cache['membership_type2id'] = dict()
+		self.lookup_cache['membership_type2id'][membership_type_name] = type_id
+		self.lookup_cache_lock.notifyAll()
+		self.lookup_cache_lock.release()
+		return type_id
+
+
+	def getFinancialTypeID(self, financial_type_name):
+		# first: look up in cache
+		if self.lookup_cache.has_key('financial_type2id') and self.lookup_cache['financial_type2id'].has_key(financial_type_name):
+			return self.lookup_cache['financial_type2id'][financial_type_name]
+
+		timestamp = time.time()
+		query = { 	'action': 'get',
+					'entity': 'FinancialType',
+					'name': financial_type_name }
+		result = self.performAPICall(query)
+		if result['count']>1:
+			self.log("Non-uniqe financial type name '%s'" % financial_type_name,
+				logging.WARN, 'API', 'get', 'FinancialType', None, None, time.time()-timestamp)
+			raise CiviAPIException("Non-uniqe financial type name '%s'" % financial_type_name)
+		elif result['count']==1:
+			type_id = result['values'][0]['id']
+			self.log("Financial type '%s' resolved to id %s." % (financial_type_name, type_id),
+				logging.DEBUG, 'API', 'get', 'FinancialType', type_id, None, time.time()-timestamp)
+		else:
+			type_id = 0
+			self.log("Financial type '%s' could NOT be resolved",
+				logging.DEBUG, 'API', 'get', 'FinancialType', None, None, time.time()-timestamp)
+
+		self.lookup_cache_lock.acquire()
+		if not self.lookup_cache.has_key('financial_type2id'):
+			self.lookup_cache['financial_type2id'] = dict()
+		self.lookup_cache['financial_type2id'][financial_type_name] = type_id
+		self.lookup_cache_lock.notifyAll()
+		self.lookup_cache_lock.release()
+		return type_id
+
 
 	def getEmail(self, contact_id, location_type_id):
 		timestamp = time.time()
