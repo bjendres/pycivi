@@ -194,6 +194,36 @@ class CiviContactEntity(CiviTaggableEntity):
 				self.set('job_title', '')
 				return True
 
+		elif current_type == 'Organization':
+			if new_type == 'Individual':
+				# Conversion: Organization -> Individual
+				self.set('contact_type', 'Individual')
+				self.set('contact_sub_type', '')
+
+				# fix names
+				organization_name = self.get('organization_name')
+				if not self.get('last_name') and not self.get('last_name'):
+					# check, if organization name possibly holds first and last name
+					parts = organization_name.split(' ', 1)
+					if len(parts) > 1:
+						self.set('first_name', parts[0])
+						self.set('last_name', parts[1])
+					else:
+						self.set('first_name', '')
+						self.set('last_name', parts[0])
+
+				elif not self.get('last_name'):
+					first_name = self.get('first_name')
+					if organization_name!=first_name and organization_name.startswith(first_name + ' '):
+						self.set('last_name', organization_name[len(first_name)+1:].strip())
+					else:
+						self.set('last_name', organization_name)
+				
+				elif not self.get('first_name'):
+					# simply no first name...can't be helped...
+					pass
+				return True
+
 		elif current_type == 'Household':
 			if new_type == 'Individual':
 				# Conversion: Household -> Individual
