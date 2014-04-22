@@ -72,7 +72,6 @@ class CiviEntity:
 			self._storeChanges(changed)
 		return changed
 
-
 	# fill all provided attributes, i.e. do not overwrite any data, only set the ones that hadn't been set before
 	def fill(self, attributes, store=False):
 		changed = dict()
@@ -243,6 +242,16 @@ class CiviContactEntity(CiviTaggableEntity):
 
 		self.civicrm.log("Unknown conversion '%s' => '%s'!" % (current_type, new_type), logging.ERROR)
 		return False
+
+	def updateDisplayName(self):
+		"""
+		update display name
+		"""
+		request = dict()
+		request['action'] = 'update'
+		request['entity'] = self.entity_type
+		request['id'] = self.get('id')
+		self.civicrm.performAPICall(request, {'forcePost': True})
 
 
 class CiviPhoneEntity(CiviEntity):

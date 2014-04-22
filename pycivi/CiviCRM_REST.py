@@ -74,7 +74,7 @@ class CiviCRM_REST(CiviCRM):
 				self.rest_url = self.url + '/sites/all/modules/civicrm/extern/rest.php'
 
 
-	def performAPICall(self, params=dict()):
+	def performAPICall(self, params=dict(), execParams=dict()):
 		timestamp = time.time()
 		params['api_key'] = self.user_key
 		params['key'] = self.site_key
@@ -84,7 +84,7 @@ class CiviCRM_REST(CiviCRM):
 		if self.debug:
 			params['debug'] = 1
 
-		if params['action'] in ['create', 'delete']:
+		if (params['action'] in ['create', 'delete']) or (execParams['forcePost']):
 			reply = requests.post(self.rest_url, params=params, verify=False)
 		else:
 			reply = requests.get(self.rest_url, params=params, verify=False)
