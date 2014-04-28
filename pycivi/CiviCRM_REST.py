@@ -84,7 +84,7 @@ class CiviCRM_REST(CiviCRM):
 		if self.debug:
 			params['debug'] = 1
 
-		if (params['action'] in ['create', 'delete']) or (execParams['forcePost']):
+		if (params['action'] in ['create', 'delete']) or (execParams.get('forcePost', False)):
 			reply = requests.post(self.rest_url, params=params, verify=False)
 		else:
 			reply = requests.get(self.rest_url, params=params, verify=False)
