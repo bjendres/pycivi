@@ -115,10 +115,7 @@ class CiviEntity:
 				changes[key] = self.attributes[key]
 		
 		if changes:
-			changes['entity'] = self.entity_type
-			changes['action'] = 'create'
-			changes['id'] = self.attributes['id']
-			civi.performAPICall(changes)
+			self._storeChanges(changes)
 			civi.log("Stored changes to '%s'" % unicode(str(self), 'utf8'), logging.INFO)
 		else:
 			civi.log("No changes have been made, not storing '%s'" % unicode(str(self), 'utf8'), logging.INFO)
@@ -327,15 +324,13 @@ class CiviEmailEntity(CiviEntity):
 	# update all provided attributes.
 	# FIX for Civicrm-4.3.7:
 	# We need to provide all attributes of the entity for an update
-
-	def update(self, attributes, store=False):
-		changed = dict()
-		for key in attributes.keys():
-			if (self.attributes.get(key, None)!=attributes[key]):
-				self.attributes[key] = attributes[key]
-				changed[key] = self.attributes[key]
-		self.attributes.update(attributes)
-		if store:
-			self._storeChanges(self.attributes)
-		return changed
-
+	def _storeChanges(self, changed_attributes):
+		print "store"
+		if changed_attributes:
+			# we have to submit the entity_id
+			print changed_attributes
+			if not 'email' in changed_attributes:
+				changed_attributes['email'] = self.get('email')
+			print changed_attributes
+			return CiviEntity._storeChanges(self, changed_attributes)
+		return dict()
