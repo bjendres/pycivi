@@ -617,17 +617,33 @@ def import_contact_prefix(civicrm, record_source, parameters=dict()):
 	"""
 	for record in record_source:
 		timestamp = time.time()
-		contact = civicrm.getEntity('Contact', record)
+		contact_id = civicrm.getContactID(record)
+		if not contact_id:
+			civicrm.log(u"Could not find contact ID in record.",
+			  logging.WARN, 'importer', 'import_contact_prefix', 'Contact', None, None, time.time()-timestamp)
+			continue
+
+		contact = civicrm.getEntity('Contact', {'id': contact_id})
 		if not contact:
 			civicrm.log(u"Could not find contact with external id '%s'" % record['external_identifier'],
 			  logging.WARN, 'importer', 'import_contact_prefix', 'Contact', None, None, time.time()-timestamp)
 		else:
+			if not record.get('prefix_id', None):
+				prefix = record.get('prefix', None)
+				prefix_id = civicrm.getOptionValue(civicrm.getOptionGroupID('individual_prefix'), prefix)
+				if not prefix_id:
+					civicrm.log(u"Prefix '%s' doesn't exist!" % prefix,
+					  logging.WARN, 'importer', 'import_contact_prefix', 'Contact', None, None, time.time()-timestamp)
+					continue
+				else:
+					record['prefix_id'] = prefix_id
+
 			changed = contact.update(record, True)
 			if changed:
-				civicrm.log(u"Updated Title for '%s'" % unicode(str(contact), 'utf8'),
+				civicrm.log(u"Updated Prefix for '%s'" % unicode(str(contact), 'utf8'),
 				  logging.INFO, 'importer', 'import_contact_prefix', 'Contact', contact.get('id'), None, time.time()-timestamp)
 			else:
-				civicrm.log(u"Title for '%s' was up to date." % unicode(str(contact), 'utf8'),
+				civicrm.log(u"Prefix for '%s' was up to date." % unicode(str(contact), 'utf8'),
 				  logging.INFO, 'importer', 'import_contact_prefix', 'Contact', contact.get('id'), None, time.time()-timestamp)
 
 
