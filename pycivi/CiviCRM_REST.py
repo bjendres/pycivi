@@ -56,12 +56,17 @@ class CiviAPIException(Exception):
 
 class CiviCRM_REST(CiviCRM):
 
-	def __init__(self, url, site_key, user_key, logfile=None):
+	def __init__(self, url, site_key, user_key, logfile=None, options=dict()):
 		# init some attributes
 		CiviCRM.__init__(self, logfile)
 		self.url = url
 		self.site_key = site_key
 		self.user_key = user_key
+		self.auth = None
+
+		if options.has_key('auth_user') and options.has_key('auth_pass'):
+			from requests.auth import HTTPBasicAuth
+			self.auth = HTTPBasicAuth(options['auth_user'], options['auth_pass'])
 
 		# set rest url
 		if self.url.endswith('extern/rest.php'):
@@ -85,9 +90,9 @@ class CiviCRM_REST(CiviCRM):
 			params['debug'] = 1
 
 		if (params['action'] in ['create', 'delete']) or (execParams.get('forcePost', False)):
-			reply = requests.post(self.rest_url, params=params, verify=False)
+			reply = requests.post(self.rest_url, params=params, verify=False, auth=self.auth)
 		else:
-			reply = requests.get(self.rest_url, params=params, verify=False)
+			reply = requests.get(self.rest_url, params=params, verify=False, auth=self.auth)
 
 		self.log("API call completed - status: %d, url: '%s'" % (reply.status_code, reply.url), 
 			logging.DEBUG, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
