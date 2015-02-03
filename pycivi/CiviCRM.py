@@ -887,8 +887,8 @@ class CiviCRM:
 		query['action'] = 'get'
 		query['entity'] = 'Phone'
 		query['contact_id'] = data['contact_id']
-		query['phone_type'] = data['phone_type']
-		query['location_type'] = data['location_type']
+		query['phone_type'] = data.get('phone_type', '')
+		query['location_type'] = data.get('location_type', '')
 		result = self.performAPICall(query)
 		if result['is_error']:
 			raise CiviAPIException(result['error_message'])

@@ -325,12 +325,9 @@ class CiviEmailEntity(CiviEntity):
 	# FIX for Civicrm-4.3.7:
 	# We need to provide all attributes of the entity for an update
 	def _storeChanges(self, changed_attributes):
-		print "store"
 		if changed_attributes:
 			# we have to submit the entity_id
-			print changed_attributes
 			if not 'email' in changed_attributes:
 				changed_attributes['email'] = self.get('email')
-			print changed_attributes
 			return CiviEntity._storeChanges(self, changed_attributes)
 		return dict()
