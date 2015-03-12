@@ -887,6 +887,8 @@ class CiviCRM:
 		query['action'] = 'get'
 		query['entity'] = 'Phone'
 		query['contact_id'] = data['contact_id']
+		query['phone_type'] = data.get('phone_type', '')
+		query['location_type'] = data.get('location_type', '')
 		query['phone_type_id'] = data.get('phone_type_id', '')
 		query['location_type_id'] = data.get('location_type_id', '')
 		result = self.performAPICall(query)
