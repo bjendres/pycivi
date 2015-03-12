@@ -80,7 +80,7 @@ class CiviCRM:
 			logger2.setLevel(logging.DEBUG)
 			logger2.setFormatter(logging.Formatter(u'%(asctime)s;%(message)s'))
 			self._logger.addHandler(logger2)
-		
+
 		# some more internal attributes
 		self.debug = False
 		self.api_version = 3
@@ -154,14 +154,14 @@ class CiviCRM:
 		else:
 			return None
 
-	
+
 
 	def getEntity(self, entity_type, attributes, primary_attributes=['id','external_identifier']):
 		timestamp = time.time()
 
 		query = dict()
 		first_key = None
-		for key in primary_attributes: 
+		for key in primary_attributes:
 			if attributes.has_key(key):
 				query[key] = attributes[key]
 				if first_key==None:
@@ -196,7 +196,7 @@ class CiviCRM:
 
 		query = dict()
 		first_key = None
-		for key in primary_attributes: 
+		for key in primary_attributes:
 			if attributes.has_key(key):
 				query[key] = attributes[key]
 				if first_key==None:
@@ -237,7 +237,7 @@ class CiviCRM:
 
 	def createOrUpdate(self, entity_type, attributes, update_type='update', primary_attributes=[u'id', u'external_identifier']):
 		query = dict()
-		for key in primary_attributes: 
+		for key in primary_attributes:
 			if attributes.has_key(key):
 				query[key] = attributes[key]
 
@@ -274,7 +274,7 @@ class CiviCRM:
 				if type(result['values'])==dict:
 					return self._createEntity(entity_type, result['values'][str(result['id'])])
 				else:
-					return self._createEntity(entity_type, result['values'][0])	
+					return self._createEntity(entity_type, result['values'][0])
 
 
 	###########################################################################
@@ -288,10 +288,10 @@ class CiviCRM:
 			return attributes['id']
 		elif attributes.has_key('contact_id'):
 			return attributes['contact_id']
-		
+
 		query = dict()
 		first_key = None
-		for key in primary_attributes: 
+		for key in primary_attributes:
 			if attributes.has_key(key):
 				query[key] = attributes[key]
 				if first_key==None:
@@ -329,15 +329,15 @@ class CiviCRM:
 				logging.DEBUG, 'pycivi', 'get', 'Contact', first_key, None, time.time()-timestamp)
 			return 0
 
-	
+
 	def getEntityID(self, attributes, entity_type, primary_attributes):
 		timestamp = time.time()
 		if attributes.has_key('id'):
 			return attributes['id']
-		
+
 		query = dict()
 		first_key = None
-		for key in primary_attributes: 
+		for key in primary_attributes:
 			if attributes.has_key(key):
 				query[key] = attributes[key]
 				if first_key==None:
@@ -584,7 +584,7 @@ class CiviCRM:
 
 		return group_id
 
-	
+
 	def getOptionValueID(self, option_group_id, name):
 		"""
 		Get the ID for a given option value
@@ -663,13 +663,13 @@ class CiviCRM:
 		if not self.lookup_cache.has_key('option_value'):
 			self.lookup_cache['option_value'] = dict()
 		if not self.lookup_cache['option_value'].has_key(option_group_id):
-			self.lookup_cache['option_value'][option_group_id] = dict()			
+			self.lookup_cache['option_value'][option_group_id] = dict()
 		self.lookup_cache['option_value'][option_group_id][name] = value
 		self.lookup_cache_lock.notifyAll()
 		self.lookup_cache_lock.release()
 
 		return value
-		
+
 
 	def setOptionValue(self, option_group_id, name, attributes=dict()):
 		"""
@@ -684,14 +684,14 @@ class CiviCRM:
 		result = self.performAPICall(query)
 		if result['is_error']:
 			raise CiviAPIException(result['error_message'])
-		
+
 		# store value
 		value_id = result['values'][0]['value']
 		self.lookup_cache_lock.acquire()
 		if not self.lookup_cache.has_key('option_value'):
 			self.lookup_cache['option_value'] = dict()
 		if not self.lookup_cache['option_value'].has_key(option_group_id):
-			self.lookup_cache['option_value'][option_group_id] = dict()			
+			self.lookup_cache['option_value'][option_group_id] = dict()
 		self.lookup_cache['option_value'][option_group_id][name] = value_id
 		self.lookup_cache_lock.notifyAll()
 		self.lookup_cache_lock.release()
@@ -887,8 +887,8 @@ class CiviCRM:
 		query['action'] = 'get'
 		query['entity'] = 'Phone'
 		query['contact_id'] = data['contact_id']
-		query['phone_type'] = data.get('phone_type', '')
-		query['location_type'] = data.get('location_type', '')
+		query['phone_type_id'] = data.get('phone_type_id', '')
+		query['location_type_id'] = data.get('location_type_id', '')
 		result = self.performAPICall(query)
 		if result['is_error']:
 			raise CiviAPIException(result['error_message'])
@@ -1208,4 +1208,3 @@ class CiviCRM:
 			return CiviEmailEntity(entity_type, attributes.get('id', None), self, attributes)
 		else:
 			return CiviEntity(entity_type, attributes.get('id', None), self, attributes)
-
