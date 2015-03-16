@@ -29,7 +29,6 @@ __maintainer__  = "Björn Endres"
 __email__       = "endres[at]systopia.de"
 
 
-import requests
 import logging
 import sys
 import json
@@ -43,6 +42,12 @@ from distutils.version import LooseVersion
 from CiviEntity import *
 from CiviCRM import CiviCRM
 
+try:
+	import requests
+except ImportError as err:
+	print "ERROR: Cannot import requests"
+	print err
+	sys.exit(1)
 
 if LooseVersion(requests.__version__) < LooseVersion('1.1.0'):
 	print "ERROR: You need requests >= 1.1.0"
@@ -94,14 +99,14 @@ class CiviCRM_REST(CiviCRM):
 		else:
 			reply = requests.get(self.rest_url, params=params, verify=False, auth=self.auth)
 
-		self.log("API call completed - status: %d, url: '%s'" % (reply.status_code, reply.url), 
+		self.log("API call completed - status: %d, url: '%s'" % (reply.status_code, reply.url),
 			logging.DEBUG, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
 
 		if reply.status_code != 200:
 			raise CiviAPIException("HTML response code %d received, please check URL" % reply.status_code)
 
 		result = json.loads(reply.text)
-				
+
 		# do some logging
 		runtime = time.time()-timestamp
 		self._api_calls += 1
@@ -110,14 +115,12 @@ class CiviCRM_REST(CiviCRM):
 		if result.has_key('undefined_fields'):
 			fields = result['undefined_fields']
 			if fields:
-				self.log("API call: Undefined fields reported: %s" % str(fields), 
+				self.log("API call: Undefined fields reported: %s" % str(fields),
 					logging.DEBUG, 'API', params['action'], params['entity'], params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
 
 		if result['is_error']:
-			self.log("API call error: '%s'" % result['error_message'], 
+			self.log("API call error: '%s'" % result['error_message'],
 				logging.ERROR, 'API', params['action'], params['entity'], params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
 			raise CiviAPIException(result['error_message'])
 		else:
 			return result
-
-

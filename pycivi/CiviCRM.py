@@ -444,6 +444,95 @@ class CiviCRM:
 		return field_id
 
 
+	def getCustomGroupID(self, group_name):
+		"""
+		Get the ID for a given custom field
+		"""
+		timestamp = time.time()
+		if self.lookup_cache.has_key('custom_group') and self.lookup_cache['custom_group'].has_key(group_name):
+			return self.lookup_cache['custom_group'][group_name]
+
+		query = dict()
+		query['entity'] = 'CustomGroup'
+		query['action'] = 'get'
+		query['title'] = group_name
+
+		result = self.performAPICall(query)
+		if result['count']>1:
+			group_id = 0
+			self.log(u"More than one CustomGroup found with name '%s'!" % group_name,
+				logging.WARN, 'API', 'get', 'CustomGroup', None, None, time.time()-timestamp)
+		elif result['count']==0:
+			group_id = 0
+			self.log(u"CustomGroup '%s' does not exist." % group_name,
+				logging.DEBUG, 'API', 'get', 'CustomGroup', None, None, time.time()-timestamp)
+		else:
+			group_id = result['values'][0]['id']
+			self.log(u"CustomGroup '%s' resolved to ID %s" % (group_name, group_id),
+				logging.DEBUG, 'API', 'get', 'CustomGroup', group_id, None, time.time()-timestamp)
+
+		# store value
+		self.lookup_cache_lock.acquire()
+		if not self.lookup_cache.has_key('custom_group'):
+			self.lookup_cache['custom_group'] = dict()
+		self.lookup_cache['custom_group'][group_name] = group_id
+		self.lookup_cache_lock.notifyAll()
+		self.lookup_cache_lock.release()
+
+		return group_id
+
+
+	def getCustomFieldIDWithGroupName(self, field_name, group_name):
+		"""
+		Get the ID for a given custom field
+		"""
+		timestamp = time.time()
+		lookup_name = '{0}__{1}'.format(field_name, group_name)
+		if self.lookup_cache.has_key('custom_field') and self.lookup_cache['custom_field'].has_key(lookup_name):
+			return self.lookup_cache['custom_field'][lookup_name]
+
+		# get group_id
+		group_id = self.getCustomGroupID(group_name)
+		if not group_id:
+			self.lookup_cache_lock.acquire()
+			if not self.lookup_cache.has_key('custom_field'):
+				self.lookup_cache['custom_field'] = dict()
+			self.lookup_cache['custom_field'][lookup_name] = 0
+			self.lookup_cache_lock.notifyAll()
+			self.lookup_cache_lock.release()
+			return 0
+
+		query = dict()
+		query['entity'] = 'CustomField'
+		query['action'] = 'get'
+		query['custom_group_id'] = group_id
+		query['label'] = field_name
+
+		result = self.performAPICall(query)
+		if result['count']>1:
+			field_id = 0
+			self.log(u"More than one custom field found with name '%s'!" % field_name,
+				logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
+		elif result['count']==0:
+			field_id = 0
+			self.log(u"Custom field '%s' does not exist." % field_name,
+				logging.DEBUG, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
+		else:
+			field_id = result['values'][0]['id']
+			self.log(u"Custom field '%s' resolved to ID %s" % (field_name, field_id),
+				logging.DEBUG, 'API', 'get', 'CustomField', field_id, None, time.time()-timestamp)
+
+		# store value
+		self.lookup_cache_lock.acquire()
+		if not self.lookup_cache.has_key('custom_field'):
+			self.lookup_cache['custom_field'] = dict()
+		self.lookup_cache['custom_field'][lookup_name] = field_id
+		self.lookup_cache_lock.notifyAll()
+		self.lookup_cache_lock.release()
+
+		return field_id
+
+
 	def setCustomFieldOptionValue(self, entity_id, field_name, value, entity_type='Contact', create_option_value_if_not_exists=True):
 		"""
 		Sets a custom field's option value
