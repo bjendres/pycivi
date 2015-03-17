@@ -487,7 +487,7 @@ class CiviCRM:
 		Get the ID for a given custom field
 		"""
 		timestamp = time.time()
-		lookup_name = '{0}__{1}'.format(field_name, group_name)
+		lookup_name = u'{0}__{1}'.format(field_name, group_name)
 		if self.lookup_cache.has_key('custom_field') and self.lookup_cache['custom_field'].has_key(lookup_name):
 			return self.lookup_cache['custom_field'][lookup_name]
 
