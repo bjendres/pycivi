@@ -565,6 +565,20 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
 					logging.WARN, 'importer', 'import_contact_phone', 'Phone', None, None, time.time()-timestamp)
 				continue
 
+		# get phone-type-id
+		if not record.has_key('phone_type_id'):
+			phone_type = record.get('phone_type', parameters.get('phone_type', 'Phone'))
+
+			option_group_id = civicrm.getOptionGroupID('phone_type')
+			phone_type_id = civicrm.getOptionValue(option_group_id, phone_type)
+
+			if not phone_type_id:
+				civicrm.log(u"Could not write contact phone number, phone type %s could not be resolved" % phone_type,
+					logging.WARN, 'importer', 'import_contact_phone', 'Phone', None, None, time.time()-timestamp)
+				continue
+			else:
+				record['phone_type_id'] = phone_type_id
+
 		if multiple=='allow':
 			# allow multiple phone numbers of the same type
 			phone_numbers = civicrm.getPhoneNumbers(record['contact_id'], record['location_type_id'])
