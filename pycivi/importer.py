@@ -90,7 +90,7 @@ class CSVRecordSource:
 	def next(self):
 		if self.row_iterator:
 			row = self.row_iterator.next()
-			
+
 			# build record
 			record = dict()
 			for i in range(len(row)):
@@ -109,7 +109,7 @@ class CSVRecordSource:
 
 def _get_or_create_from_params(name, parameters, create_entry=dict()):
 	entry = parameters.get(name, None)
-	if entry==None:	
+	if entry==None:
 		parameters_lock = parameters['lock']
 		parameters_lock.acquire()
 		# test again, maybe another thread already created them...
@@ -158,7 +158,7 @@ def import_contributions(civicrm, record_source, parameters=dict()):
 				civicrm.log(u"Contact not found! No valid contact reference specified in (%s)" % unicode(str(record), 'utf8'),
 					logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
 				continue
-		
+
 		# lookup payment type
 		if update.has_key('payment_instrument'):
 			if update['payment_instrument']:
@@ -226,7 +226,7 @@ def import_rcontributions(civicrm, record_source, parameters=dict()):
 				civicrm.log(u"Contact not found! No valid contact reference specified in (%s)" % unicode(str(record), 'utf8'),
 					logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
 				continue
-		
+
 		# lookup payment type
 		if update.has_key('payment_instrument'):
 			if update['payment_instrument']:
@@ -273,7 +273,7 @@ def import_campaigns(civicrm, record_source, parameters=dict()):
 	entity_type = parameters.get('entity_type', 'Campaign')
 	update_mode = parameters.get('update_mode', 'update')
 	for record in record_source:
-		
+
 		update = dict(record)
 		# lookup campaign type
 		if update.has_key('campaign_type'):
@@ -284,7 +284,7 @@ def import_campaigns(civicrm, record_source, parameters=dict()):
 			civicrm.log(u"Campaign type ID not identified! No valid campaign type specified in (%s)" % unicode(str(record), 'utf8'),
 				logging.ERROR, 'importer', 'import_campaigns', 'Campaign', None, None, time.time()-timestamp)
 			continue
-		
+
 		# lookup campaign status
 		if update.has_key('status'):
 			if update['status']:
@@ -348,7 +348,7 @@ def import_notes(civicrm, record_source, parameters=dict()):
 				pass
 
 		if not 'entity_id' in record or not 'entity_table' in record:
-			civicrm.log("Failed to create note, missing target information entity_id and entity_table", 
+			civicrm.log("Failed to create note, missing target information entity_id and entity_table",
 				logging.ERROR, 'importer', 'import_notes', 'Note', None, None, time.time()-timestamp)
 			continue
 
@@ -363,7 +363,7 @@ def import_notes(civicrm, record_source, parameters=dict()):
 			try:
 				note = civicrm.createOrUpdate('Note', record, update_type='update', primary_attributes=primary_attributes)
 			except CiviAPIException as ex:
-				civicrm.log("Failed to create/update note. Please make sure that GET/POST parameter length (e.g. PHP's suhosin.get.max_value_length) is greater than %d" % len(record['note']), 
+				civicrm.log("Failed to create/update note. Please make sure that GET/POST parameter length (e.g. PHP's suhosin.get.max_value_length) is greater than %d" % len(record['note']),
 					logging.ERROR, 'importer', 'import_notes', 'Note', None, None, time.time()-timestamp)
 				raise ex
 
@@ -380,9 +380,9 @@ def import_contact_address(civicrm, record_source, parameters=dict()):
 	Makes sure, that the contact has the given address
 
 	Possible record entries:
-	"id", "contact_id", "location_type_id", "is_primary", "is_billing", "street_address", 
-	"supplemental_address_1", "supplemental_address_2", "city", "postal_code", "country_id", 
-	"manual_geo_code", 
+	"id", "contact_id", "location_type_id", "is_primary", "is_billing", "street_address",
+	"supplemental_address_1", "supplemental_address_2", "city", "postal_code", "country_id",
+	"manual_geo_code",
 
 	Parameters:
 	parameters['location_type'] 		sets the type (default "Main") if no information provided by record
@@ -444,6 +444,44 @@ def import_contact_base(civicrm, record_source, parameters=dict()):
 			logging.INFO, 'importer', 'import_contact_base', 'Contact', entity.get('id'), None, time.time()-timestamp)
 
 
+def import_contact_with_dupe_check(civicrm, record_source, parameters=dict()):
+	"""
+	Imports very basic contact data, using the records' 'external_identifier' or 'id'
+	as identification.
+
+	parameters['update_mode'] can be set to anything CiviCRM.createOrUpdate accepts
+	"""
+	_prepare_parameters(parameters)
+	timestamp = time.time()
+	entity_type = parameters.get('entity_type', 'Contact')
+	for record in record_source:
+		query = dict()
+		query['action'] = 'create'
+		query['entity'] = entity_type
+		query['dupe_check'] = 1
+		query.update(record)
+		result = civicrm.performSimpleAPICall(query)
+
+		if result['is_error'] == 1 and result['error_code'] == 'duplicate':
+			if len(result['ids']) == 1:
+				record['id'] = result['ids'][0]
+				entity = civicrm.createOrUpdate(entity_type, record, 'fill', ['id'])
+				civicrm.log(u"Duplicate found and updated: '%s'" % unicode(str(entity), 'utf8'),
+					logging.INFO, 'importer', 'import_contact_with_dupe_check', 'Contact', entity.get('id'), None, time.time()-timestamp)
+			else:
+				civicrm.log(u"More than one dubletten found: {}".format(result['ids']),
+					logging.INFO, 'importer', 'import_contact_with_dupe_check', 'Contact', None, None, time.time()-timestamp)
+
+		elif result['is_error'] == 1 and result['error_message'] == 'DB Error: already exists':
+			entity = civicrm.createOrUpdate(entity_type, record, 'update')
+			civicrm.log(u"Contact identified and updated: '%s'" % unicode(str(entity), 'utf8'),
+				logging.INFO, 'importer', 'import_contact_with_dupe_check', 'Contact', entity.get('id'), None, time.time()-timestamp)
+
+		else:
+			civicrm.log(u"Wrote base contact '{first_name} {last_name} [{id}]'".format(**result['values'][0]),
+				logging.INFO, 'importer', 'import_contact_base', 'Contact', result['id'], None, time.time()-timestamp)
+
+
 def import_contact_website(civicrm, record_source, parameters=dict()):
 	"""
 	Imports contact web sites.
@@ -472,7 +510,7 @@ def import_contact_website(civicrm, record_source, parameters=dict()):
 				if record['website_type']:
 					record['website_type_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('website_type'), record['website_type'])
 				del record['website_type']
-			
+
 		if (not record.has_key('website_type_id')):
 			civicrm.log(u"Could not write contact website, website type '%s' could not be resolved" % record.get('website_type', ''),
 				logging.WARN, 'importer', 'import_contact_website', 'Website', None, None, time.time()-timestamp)
@@ -499,7 +537,7 @@ def import_contact_website(civicrm, record_source, parameters=dict()):
 				site = civicrm.createWebsite(record)
 				civicrm.log("Added new website for contact [%s]" % str(site.get('contact_id')),
 					logging.INFO, 'importer', 'import_contact_website', 'Website', site.get('id'), site.get('contact_id'), time.time()-timestamp)
-		
+
 		else:
 			if len(sites) > 0:
 				site = sites[0]
@@ -681,9 +719,9 @@ def import_contact_greeting(civicrm, record_source, parameters=dict()):
 			civicrm.log(u"Could not write contact greeting, contact not found for '%s'" % unicode(str(contact), 'utf8'),
 				logging.WARN, 'importer', 'import_contact_greeting', 'Contact', None, None, time.time()-timestamp)
 			continue
-		
+
 		update = dict()
-		
+
 		for key in ['postal_greeting', 'email_greeting']:
 			if record.get(key, None):
 				key_id = civicrm.getOptionValue(
@@ -810,7 +848,7 @@ def import_membership(civicrm, record_source, parameters=dict()):
 			civicrm.log(u"Could not write membership, contact not found for '%s'" % str(record),
 				logging.WARN, 'importer', 'import_membership', 'Membership', None, None, time.time()-timestamp)
 			continue
-		
+
 		record['is_override'] = 1 	# write status as-is
 		if record.has_key('status'):
 			status_id = civicrm.getMembershipStatusID(record['status'])
@@ -879,7 +917,7 @@ def import_contact_groups(civicrm, record_source, parameters=dict()):
 		else:
 			civicrm.log("Groups are up to date for contact %s" % contact_id,
 				logging.INFO, 'importer', 'import_contact_groups', 'Contact', contact_id, None, 0)
-		
+
 
 
 def import_contact_tags(civicrm, record_source, parameters=dict()):
@@ -994,7 +1032,7 @@ def import_delete_entity(civicrm, record_source, parameters=dict()):
 			if record.has_key(external_identifier):
 				if record[external_identifier]:
 					record['contact_id'] = civicrm.getContactID({'external_identifier': record[external_identifier]})
-				del record[external_identifier]			
+				del record[external_identifier]
 				if external_identifier in identifiers:
 					identifiers.remove(external_identifier)
 					identifiers.append('contact_id')
@@ -1082,7 +1120,7 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
 
 				if record_list_lock:
 					record_list_lock.acquire()
-				
+
 				if len(record_list)>0:
 					record = record_list.pop(0)
 				else:
@@ -1097,7 +1135,7 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
 					# execute standard function
 					try:
 						timestamp = time.time()
-						self.function(self.civicrm, [record], self.parameters)			
+						self.function(self.civicrm, [record], self.parameters)
 					except:
 						civicrm.logException(u"Exception caught for '%s' on procedure '%s'. Exception was: " % (threading.currentThread().name, import_function.__name__),
 							logging.ERROR, 'importer', import_function.__name__, None, None, None, time.time()-timestamp)
@@ -1119,11 +1157,10 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
 		except:
 			remaining_records = False
 		record_list_lock.release()
-	
+
 	for worker in thread_list:
 		if worker.isAlive():
 			worker.join()
 
 	civicrm.log(u"Parallelized procedure '%s' completed." % import_function.__name__,
 		logging.INFO, 'importer', 'parallelize', None, None, None, time.time()-timestamp)
-

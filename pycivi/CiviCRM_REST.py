@@ -124,3 +124,40 @@ class CiviCRM_REST(CiviCRM):
 			raise CiviAPIException(result['error_message'])
 		else:
 			return result
+
+
+	def performSimpleAPICall(self, params=dict(), execParams=dict()):
+		timestamp = time.time()
+		params['api_key'] = self.user_key
+		params['key'] = self.site_key
+		params['sequential'] = 1
+		params['json'] = 1
+		params['version'] = self.api_version
+		if self.debug:
+			params['debug'] = 1
+
+		if (params['action'] in ['create', 'delete']) or (execParams.get('forcePost', False)):
+			reply = requests.post(self.rest_url, params=params, verify=False, auth=self.auth)
+		else:
+			reply = requests.get(self.rest_url, params=params, verify=False, auth=self.auth)
+
+		self.log("API call completed - status: %d, url: '%s'" % (reply.status_code, reply.url),
+			logging.DEBUG, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
+
+		if reply.status_code != 200:
+			raise CiviAPIException("HTML response code %d received, please check URL" % reply.status_code)
+
+		result = json.loads(reply.text)
+
+		# do some logging
+		runtime = time.time()-timestamp
+		self._api_calls += 1
+		self._api_calls_time += runtime
+
+		if result.has_key('undefined_fields'):
+			fields = result['undefined_fields']
+			if fields:
+				self.log("API call: Undefined fields reported: %s" % str(fields),
+					logging.DEBUG, 'API', params['action'], params['entity'], params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
+
+		return result
