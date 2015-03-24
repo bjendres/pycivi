@@ -469,7 +469,7 @@ def import_contact_with_dupe_check(civicrm, record_source, parameters=dict()):
 				civicrm.log(u"Duplicate found and updated: '%s'" % unicode(str(entity), 'utf8'),
 					logging.INFO, 'importer', 'import_contact_with_dupe_check', 'Contact', entity.get('id'), None, time.time()-timestamp)
 			else:
-				civicrm.log(u"More than one dubletten found: {}".format(result['ids']),
+				civicrm.log(u"More than one duplicates found: {}".format(result['ids']),
 					logging.INFO, 'importer', 'import_contact_with_dupe_check', 'Contact', None, None, time.time()-timestamp)
 
 		elif result['is_error'] == 1 and result['error_message'] == 'DB Error: already exists':
