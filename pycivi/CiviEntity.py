@@ -76,7 +76,7 @@ class CiviEntity:
 	def fill(self, attributes, store=False):
 		changed = dict()
 		for key in attributes.keys():
-			if not self.attributes.has_key(key):
+			if not self.attributes.get(key, None):
 				self.attributes[key] = attributes[key]
 				changed[key] = self.attributes[key]
 		if store:
@@ -106,14 +106,14 @@ class CiviEntity:
 	def store(self, civi=None):
 		if civi==None: civi = self.civicrm
 		result = civi.performAPICall({'entity':self.entity_type, 'action':'get', 'id':self.attributes['id']})
-		current_state = result['values'][0] 
+		current_state = result['values'][0]
 
 		# find the fields that have changed
 		changes = dict()
 		for key in self.attributes:
 			if not current_state.has_key(key) or self.attributes[key]!=current_state[key]:
 				changes[key] = self.attributes[key]
-		
+
 		if changes:
 			self._storeChanges(changes)
 			civi.log("Stored changes to '%s'" % unicode(str(self), 'utf8'), logging.INFO)
@@ -161,7 +161,7 @@ class CiviContactEntity(CiviTaggableEntity):
 					entity = civi._createEntity(entity_type.CONTRIBUTION, pending_contribution)
 					print "Deleting related contribution", str(entity)
 					entity.delete()
-		
+
 		# now delte the contact
 		civi.performAPICall(query)
 
@@ -214,7 +214,7 @@ class CiviContactEntity(CiviTaggableEntity):
 						self.set('last_name', organization_name[len(first_name)+1:].strip())
 					else:
 						self.set('last_name', organization_name)
-				
+
 				elif not self.get('first_name'):
 					# simply no first name...can't be helped...
 					pass
@@ -267,15 +267,15 @@ class CiviContributionEntity(CiviTaggableEntity):
 
 	def _storeChanges(self, changed_attributes):
 		if changed_attributes:
-			# we have to submit the contact ID in any case, so that an activity can be produced!	
+			# we have to submit the contact ID in any case, so that an activity can be produced!
 			if not 'contact_id' in changed_attributes:
 				changed_attributes['contact_id'] = self.get('contact_id')
-			
+
 			# we also have to submit the currency in any case
 			if not 'currency' in changed_attributes:
 				changed_attributes['currency'] = self.get('currency')
 
-			# we have to submit the status ID, otherwise it will default regardless of the current status	
+			# we have to submit the status ID, otherwise it will default regardless of the current status
 			if not 'contribution_status_id' in changed_attributes:
 				changed_attributes['contribution_status_id'] = self.get('contribution_status_id')
 			return CiviTaggableEntity._storeChanges(self, changed_attributes)
