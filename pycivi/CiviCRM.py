@@ -277,6 +277,41 @@ class CiviCRM:
 					return self._createEntity(entity_type, result['values'][0])
 
 
+	def createIfNotExists(self, entity_type, attributes, primary_attributes=[u'id', u'external_identifier']):
+		timestamp = time.time()
+		query = dict()
+		for key in primary_attributes:
+			if attributes.has_key(key):
+				query[key] = attributes[key]
+
+		if query:
+			# try to find the entity
+			query['entity'] = entity_type
+			query['action'] = 'get'
+			result = self.performAPICall(query)
+		else:
+			# if there are no criteria given, not results should be expected
+			result = {'count': 0}
+
+		if result['count'] > 1:
+			raise CiviAPIException("Query result not unique, please provide a unique query for 'createIfNotExists'.")
+
+		elif result['count'] == 1:
+			return None
+
+		else:
+			query.update(attributes)
+			query['entity'] = entity_type
+			query['action'] = 'create'
+			result = self.performAPICall(query)
+			if result['is_error']:
+				raise CiviAPIException(result['error_message'])
+			if type(result['values'])==dict:
+				return self._createEntity(entity_type, result['values'][str(result['id'])])
+			else:
+				return self._createEntity(entity_type, result['values'][0])
+
+
 	###########################################################################
 	#                            Lookup methods                               #
 	###########################################################################
