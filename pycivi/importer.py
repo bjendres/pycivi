@@ -387,8 +387,10 @@ def import_contact_address(civicrm, record_source, parameters=dict()):
 	Parameters:
 	parameters['location_type'] 		sets the type (default "Main") if no information provided by record
 	parameters['update_mode'] 			either set to "update", "fill" or "replace" - or "add" to create a new entry
+	parameters['no_update']			 if True we do not touch existing addresses at all
 	"""
 	_prepare_parameters(parameters)
+	no_update = parameters.get('no_update', False)
 	for record in record_source:
 		timestamp = time.time()
 		record['contact_id'] = civicrm.getContactID(record)
@@ -408,23 +410,37 @@ def import_contact_address(civicrm, record_source, parameters=dict()):
 				record['location_type_id'] = civicrm.getLocationTypeID(location_type)
 				location_type_dict[location_type] = record['location_type_id']
 
-		mode = parameters.get('update_mode', 'update')
-		if mode in ['update', 'fill', 'replace']:
+		if no_update:
 			try:
-				address = civicrm.createOrUpdate('Address', record, update_type=mode, primary_attributes=['contact_id', 'location_type_id'])
-				civicrm.log(u"Wrote contact address for '%s'" % unicode(str(address), 'utf8'),
-					logging.INFO, 'importer', 'import_contact_address', 'Address', address.get('id'), None, time.time()-timestamp)
+				address = civicrm.createIfNotExists('Address', record, primary_attributes=['contact_id', 'location_type_id'])
 			except:
 				civicrm.logException("Exception while importing address for [%s]. Data was %s, exception: " % (record['contact_id'], str(record)),
 					logging.ERROR, 'importer', 'import_contact_address', 'Address', None, record['contact_id'], time.time()-timestamp)
+			else:
+				if address:
+					civicrm.log(u"Wrote contact address for '%s'" % unicode(str(address), 'utf8'),
+						logging.INFO, 'importer', 'import_contact_address', 'Address', address.get('id'), None, time.time()-timestamp)
+				else:
+					civicrm.log(u"Contact-address already exists and was not updated for contact [%s]" % str(record['contact_id']),
+						logging.INFO, 'importer', 'import_contact_address', 'Address', None, None, time.time()-timestamp)
 		else:
-			civicrm.log("Update mode '%s' not implemented!" % mode,
-				logging.ERROR, 'importer', 'import_contact_address', 'Address', None, record['contact_id'], time.time()-timestamp)
-			#entity_type = parameters.get('entity_type', 'Contact')
-			#update_mode = parameters.get('update_mode', 'update')
-			#entity = civicrm.createOrUpdate(entity_type, record, update_mode)
-			#civicrm.log(u"Wrote contact address for '%s'" % unicode(str(entity), 'utf8'),
-			#	logging.INFO, 'importer', 'import_contact_address', 'Address', entity.get('id'), None, time.time()-timestamp)
+			mode = parameters.get('update_mode', 'update')
+			if mode in ['update', 'fill', 'replace']:
+				try:
+					address = civicrm.createOrUpdate('Address', record, update_type=mode, primary_attributes=['contact_id', 'location_type_id'])
+					civicrm.log(u"Wrote contact address for '%s'" % unicode(str(address), 'utf8'),
+						logging.INFO, 'importer', 'import_contact_address', 'Address', address.get('id'), None, time.time()-timestamp)
+				except:
+					civicrm.logException("Exception while importing address for [%s]. Data was %s, exception: " % (record['contact_id'], str(record)),
+						logging.ERROR, 'importer', 'import_contact_address', 'Address', None, record['contact_id'], time.time()-timestamp)
+			else:
+				civicrm.log("Update mode '%s' not implemented!" % mode,
+					logging.ERROR, 'importer', 'import_contact_address', 'Address', None, record['contact_id'], time.time()-timestamp)
+				#entity_type = parameters.get('entity_type', 'Contact')
+				#update_mode = parameters.get('update_mode', 'update')
+				#entity = civicrm.createOrUpdate(entity_type, record, update_mode)
+				#civicrm.log(u"Wrote contact address for '%s'" % unicode(str(entity), 'utf8'),
+				#	logging.INFO, 'importer', 'import_contact_address', 'Address', entity.get('id'), None, time.time()-timestamp)
 
 
 def import_contact_base(civicrm, record_source, parameters=dict()):
@@ -450,8 +466,10 @@ def import_contact_with_dupe_check(civicrm, record_source, parameters=dict()):
 	as identification.
 
 	parameters['update_mode'] can be set to anything CiviCRM.createOrUpdate accepts
+	parameters['update_mode'] defaults to 'fill'
 	"""
 	_prepare_parameters(parameters)
+	update_mode = parameters.get('update_mode', 'fill')
 	timestamp = time.time()
 	entity_type = parameters.get('entity_type', 'Contact')
 	for record in record_source:
@@ -462,21 +480,25 @@ def import_contact_with_dupe_check(civicrm, record_source, parameters=dict()):
 		query.update(record)
 		result = civicrm.performSimpleAPICall(query)
 
+		# we have a duplicate; lets update it
 		if result['is_error'] == 1 and result['error_code'] == 'duplicate':
 			if len(result['ids']) == 1:
 				record['id'] = result['ids'][0]
-				entity = civicrm.createOrUpdate(entity_type, record, 'fill', ['id'])
+				entity = civicrm.createOrUpdate(entity_type, record, update_mode, ['id'])
 				civicrm.log(u"Duplicate found and updated: '%s'" % unicode(str(entity), 'utf8'),
 					logging.INFO, 'importer', 'import_contact_with_dupe_check', 'Contact', entity.get('id'), None, time.time()-timestamp)
 			else:
 				civicrm.log(u"More than one duplicates found: {}".format(result['ids']),
 					logging.INFO, 'importer', 'import_contact_with_dupe_check', 'Contact', None, None, time.time()-timestamp)
 
+		# there is already a contact with the given itendifiers (id or external_identifier)
+		# we also update this contact...
 		elif result['is_error'] == 1 and result['error_message'] == 'DB Error: already exists':
-			entity = civicrm.createOrUpdate(entity_type, record, 'update')
+			entity = civicrm.createOrUpdate(entity_type, record, update_mode)
 			civicrm.log(u"Contact identified and updated: '%s'" % unicode(str(entity), 'utf8'),
 				logging.INFO, 'importer', 'import_contact_with_dupe_check', 'Contact', entity.get('id'), None, time.time()-timestamp)
 
+		# no matched or existing contact found; just create a new one
 		else:
 			civicrm.log(u"Wrote base contact '{first_name} {last_name} [{id}]'".format(**result['values'][0]),
 				logging.INFO, 'importer', 'import_contact_base', 'Contact', result['id'], None, time.time()-timestamp)
@@ -576,9 +598,11 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
 
 	parameters:
 	 multiple:	'allow' - allows multiple phone numbers per type
+	 no_update: if True, existing phone-numbers won't be overwritten; default is False
 
 	"""
 	_prepare_parameters(parameters)
+	no_update = parameters.get('no_update', False)
 	multiple = parameters.get('multiple', False)
 	for record in record_source:
 		timestamp = time.time()
@@ -643,13 +667,14 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
 				civicrm.logException("Exception while updating phone number for [%s]. Data was %s, exception: " % (record['contact_id'], str(record)),
 					logging.ERROR, 'importer', 'import_contact_phone', 'Phone', None, record['contact_id'], time.time()-timestamp)
 
-			if phone_number:
+			if not no_update and phone_number:
 				if record.has_key('location_type'):
 					del record['location_type']
 				if record.has_key('location_type_id'):
 					del record['location_type_id']
 				if record.has_key('external_identifier'):
 					del record['external_identifier']
+
 				changed = phone_number.update(record, store=True)
 				if changed:
 					civicrm.log("Updated phone number: %s" % str(phone_number),
@@ -657,6 +682,10 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
 				else:
 					civicrm.log("Nothing changed for phone number: %s" % str(phone_number),
 						logging.INFO, 'importer', 'import_contact_phone', 'Phone', phone_number.get('id'), record['contact_id'], time.time()-timestamp)
+
+			elif no_update and phone_number:
+				civicrm.log("Phone_number exists and was not updated: %s" % str(phone_number),
+					logging.INFO, 'importer', 'import_contact_phone', 'Phone', phone_number.get('id'), record['contact_id'], time.time()-timestamp)
 
 			else:
 				phone_number = civicrm.createPhoneNumber(record)
@@ -669,7 +698,10 @@ def import_contact_prefix(civicrm, record_source, parameters=dict()):
 	Imports contact prefixes
 
 	Expects the fields: "prefix" and identification ('id', 'external_identifier', 'contact_id')
+
+	if parameters['no_update'] is True we do not overwrite existing prefixes
 	"""
+	no_update = parameters.get('no_update', False)
 	for record in record_source:
 		timestamp = time.time()
 		contact_id = civicrm.getContactID(record)
@@ -692,10 +724,17 @@ def import_contact_prefix(civicrm, record_source, parameters=dict()):
 					continue
 				else:
 					record['prefix_id'] = prefix_id
+					del record['prefix']
 
-			changed = contact.update(record, True)
+			if no_update:
+				changed = contact.fill(record, True)
+			else:
+				changed = contact.update(record, True)
 			if changed:
 				civicrm.log(u"Updated Prefix for '%s'" % unicode(str(contact), 'utf8'),
+				  logging.INFO, 'importer', 'import_contact_prefix', 'Contact', contact.get('id'), None, time.time()-timestamp)
+			elif no_update:
+				civicrm.log(u"Prefix for '%s' already exists and was not updated." % unicode(str(contact), 'utf8'),
 				  logging.INFO, 'importer', 'import_contact_prefix', 'Contact', contact.get('id'), None, time.time()-timestamp)
 			else:
 				civicrm.log(u"Prefix for '%s' was up to date." % unicode(str(contact), 'utf8'),
@@ -753,8 +792,10 @@ def import_contact_email(civicrm, record_source, parameters=dict()):
 
 	parameters:
 	 multiple:	'allow' - allows multiple emails per type
+	 no_update: if True, existing email-addresses won't be overwritten; default is False
 	"""
 	_prepare_parameters(parameters)
+	no_update = parameters.get('no_update', False)
 	multiple = parameters.get('multiple', False)
 	for record in record_source:
 		timestamp = time.time()
@@ -801,7 +842,7 @@ def import_contact_email(civicrm, record_source, parameters=dict()):
 		else:
 			# find and update/replace the email with the given contact
 			email = civicrm.getEmail(record['contact_id'], record['location_type_id'])
-			if email:
+			if not no_update and email:
 				if record.has_key('location_type'):
 					del record['location_type']
 				if record.has_key('location_type_id'):
@@ -815,6 +856,10 @@ def import_contact_email(civicrm, record_source, parameters=dict()):
 				else:
 					civicrm.log("Nothing changed for email: %s" % str(email),
 						logging.INFO, 'importer', 'import_contact_email', 'Email', email.get('id'), record['contact_id'], time.time()-timestamp)
+
+			elif no_update and email:
+				civicrm.log("Email exists and was not updated: %s" % str(email),
+					logging.INFO, 'importer', 'import_contact_phone', 'Phone', email.get('id'), record['contact_id'], time.time()-timestamp)
 
 			else:
 				email = civicrm.createEmail(record['contact_id'], record['location_type_id'], record['email'])
