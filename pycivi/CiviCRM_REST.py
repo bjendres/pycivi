@@ -68,6 +68,7 @@ class CiviCRM_REST(CiviCRM):
 		self.site_key = site_key
 		self.user_key = user_key
 		self.auth = None
+		self.forcePost = False
 
 		if options.has_key('auth_user') and options.has_key('auth_pass'):
 			from requests.auth import HTTPBasicAuth
@@ -94,7 +95,8 @@ class CiviCRM_REST(CiviCRM):
 		if self.debug:
 			params['debug'] = 1
 
-		if (params['action'] in ['create', 'delete']) or (execParams.get('forcePost', False)):
+		forcePost = execParams.get('forcePost', False) or self.forcePost
+		if (params['action'] in ['create', 'delete']) or forcePost:
 			reply = requests.post(self.rest_url, params=params, verify=False, auth=self.auth)
 		else:
 			reply = requests.get(self.rest_url, params=params, verify=False, auth=self.auth)
@@ -102,7 +104,9 @@ class CiviCRM_REST(CiviCRM):
 		self.log("API call completed - status: %d, url: '%s'" % (reply.status_code, reply.url),
 			logging.DEBUG, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
 
-		if reply.status_code != 200:
+		if reply.status_code == 414:
+			raise CiviAPIException("Request is too long, please check server settings or use forcePost")
+		elif reply.status_code != 200:
 			raise CiviAPIException("HTML response code %d received, please check URL" % reply.status_code)
 
 		result = json.loads(reply.text)
