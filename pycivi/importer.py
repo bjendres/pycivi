@@ -39,6 +39,8 @@ import traceback
 import datetime
 import sha
 
+from CiviCRM import CiviAPIException
+
 
 class UTF8Recoder:
     """
