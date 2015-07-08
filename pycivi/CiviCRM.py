@@ -441,7 +441,7 @@ class CiviCRM:
 		return campaign_id
 
 
-	def getCustomFieldID(self, field_name, entity_type='Contact'):
+	def getCustomFieldID(self, field_name, entity_type='Contact', use_label=True):
 		"""
 		Get the ID for a given custom field
 		"""
@@ -452,8 +452,10 @@ class CiviCRM:
 		query = dict()
 		query['entity'] = 'CustomField'
 		query['action'] = 'get'
-		query['label'] = field_name
-
+		if use_label:
+			query['label'] = field_name
+		else:
+			query['name'] = field_name
 		result = self.performAPICall(query)
 		if result['count']>1:
 			field_id = 0
