@@ -69,6 +69,7 @@ class CiviCRM_REST(CiviCRM):
 		self.user_key = user_key
 		self.auth = None
 		self.forcePost = False
+		self.headers = {}
 
 		if options.has_key('auth_user') and options.has_key('auth_pass'):
 			from requests.auth import HTTPBasicAuth
@@ -97,9 +98,9 @@ class CiviCRM_REST(CiviCRM):
 
 		forcePost = execParams.get('forcePost', False) or self.forcePost
 		if (params['action'] in ['create', 'delete']) or forcePost:
-			reply = requests.post(self.rest_url, params=params, verify=False, auth=self.auth)
+			reply = requests.post(self.rest_url, params=params, verify=False, auth=self.auth, headers=self.headers)
 		else:
-			reply = requests.get(self.rest_url, params=params, verify=False, auth=self.auth)
+			reply = requests.get(self.rest_url, params=params, verify=False, auth=self.auth, headers=self.headers)
 
 		self.log("API call completed - status: %d, url: '%s'" % (reply.status_code, reply.url),
 			logging.DEBUG, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
