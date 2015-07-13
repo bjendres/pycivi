@@ -1291,11 +1291,12 @@ class CiviCRM:
 				logging.DEBUG, 'pycivi', query['action'], 'EntityTag', entity_id, tag_id, time.time()-timestamp)
 
 
-	def setGroupMembership(self, entity_id, group_id, value=True):
+	def setGroupMembership(self, entity_id, group_id, value=True, status='Added'):
 		timestamp = time.time()
 		query = { 'entity': 'GroupContact',
-				  'contact_id' : entity_id,
-				  'group_id' : group_id,
+				  'contact_id': entity_id,
+				  'group_id':   group_id,
+				  'status':     status,
 				  }
 		if value:
 			query['action'] = 'create'
