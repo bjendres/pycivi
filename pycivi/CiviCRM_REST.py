@@ -70,6 +70,7 @@ class CiviCRM_REST(CiviCRM):
 		self.auth = None
 		self.forcePost = False
 		self.headers = {}
+		self.json_parameters = False
 
 		if options.has_key('auth_user') and options.has_key('auth_pass'):
 			from requests.auth import HTTPBasicAuth
@@ -95,6 +96,22 @@ class CiviCRM_REST(CiviCRM):
 		params['version'] = self.api_version
 		if self.debug:
 			params['debug'] = 1
+
+		if self.json_parameters:
+			# pack complex parameters into a serialised json block
+			not_json = ['api_key', 'key', 'action', 'entity']
+			json_params = dict()
+			for param in params.keys():
+				if not param in not_json:
+					json_params[param] = params.pop(param)
+			params['json'] = json.dumps(json_params)
+
+		# check for complex parameters
+		for param in params:
+			if type(params[param]) in [list, dict, tuple, set]:
+				self.log("Parameter '%s' is not of basic type. For complex parameters, consider turning on the 'json_parameters' option." % param,
+					logging.WARN, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
+				break
 
 		forcePost = execParams.get('forcePost', False) or self.forcePost
 		if (params['action'] in ['create', 'delete']) or forcePost:
