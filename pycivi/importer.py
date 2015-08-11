@@ -483,7 +483,7 @@ def import_contact_with_dupe_check(civicrm, record_source, parameters=dict()):
 		result = civicrm.performSimpleAPICall(query)
 
 		# we have a duplicate; lets update it
-		if result['is_error'] == 1 and result['error_code'] == 'duplicate':
+		if result['is_error'] == 1 and result.get('error_code') == 'duplicate':
 			if len(result['ids']) == 1:
 				record['id'] = result['ids'][0]
 				entity = civicrm.createOrUpdate(entity_type, record, update_mode, ['id'])
@@ -500,7 +500,12 @@ def import_contact_with_dupe_check(civicrm, record_source, parameters=dict()):
 			civicrm.log(u"Contact identified and updated: '%s'" % unicode(str(entity), 'utf8'),
 				logging.INFO, 'importer', 'import_contact_with_dupe_check', 'Contact', entity.get('id'), None, time.time()-timestamp)
 
-		# no matched or existing contact found; just create a new one
+		# an unkown error occured
+		elif result['is_error'] == 1:
+			civicrm.log(u"Error occured while trying to create a Contact. record: '{0}' | error_message: '{1}'".format(record, result.get('error_message', str())),
+				logging.INFO, 'importer', 'import_contact_with_dupe_check', 'Contact', record.get('external_identifier'), None, time.time()-timestamp)
+
+		# no matched or existing contact found; a new one was created
 		else:
 			civicrm.log(u"Wrote base contact '{first_name} {last_name} [{id}]'".format(**result['values'][0]),
 				logging.INFO, 'importer', 'import_contact_base', 'Contact', result['id'], None, time.time()-timestamp)
