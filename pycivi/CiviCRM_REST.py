@@ -169,7 +169,12 @@ class CiviCRM_REST(CiviCRM):
 		if reply.status_code != 200:
 			raise CiviAPIException("HTML response code %d received, please check URL" % reply.status_code)
 
-		result = json.loads(reply.text)
+		try:
+			result = json.loads(reply.text)
+		except ValueError as err:
+			self.log('Error: {0}. String: {1}'.format(err, reply.text),
+				logging.ERROR, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
+
 
 		# do some logging
 		runtime = time.time()-timestamp
