@@ -71,6 +71,9 @@ class CiviCRM_REST(CiviCRM):
 		self.forcePost = False
 		self.headers = {}
 		self.json_parameters = False
+		self.retry       = 0
+		self.retry_codes = [500, 502, 503, 504]
+		self.retry_sleep = 10
 
 		if options.has_key('auth_user') and options.has_key('auth_pass'):
 			from requests.auth import HTTPBasicAuth
@@ -96,6 +99,8 @@ class CiviCRM_REST(CiviCRM):
 		params['version'] = self.api_version
 		if self.debug:
 			params['debug'] = 1
+		if not execParams.has_key('retry'):
+			execParams['retry'] = self.retry
 
 		if self.json_parameters:
 			# pack complex parameters into a serialised json block
@@ -122,6 +127,14 @@ class CiviCRM_REST(CiviCRM):
 		self.log("API call completed - status: %d, url: '%s'" % (reply.status_code, reply.url),
 			logging.DEBUG, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
 
+		# ERROR HANDLING
+		if execParams['retry'] > 0 and reply.status_code in self.retry_codes:
+			# retry is active, and the status code is in the list => SLEEP & RETRY
+			self.log("API call will be retried in %ss" % str(self.retry_sleep),
+				logging.DEBUG, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
+			time.sleep(self.retry_sleep)
+			execParams['retry'] = execParams['retry'] - 1
+			return self.performAPICall(params, execParams)
 		if reply.status_code == 414:
 			raise CiviAPIException("Request is too long, please check server settings or use forcePost")
 		elif reply.status_code != 200:
