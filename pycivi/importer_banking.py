@@ -41,7 +41,7 @@ import time
 import traceback
 import datetime
 import sha
-
+import json
 
 
 def import_bank_accounts(civicrm, record_source, parameters=dict()):
@@ -292,3 +292,65 @@ def import_sepa_mandates(civicrm, record_source, parameters=dict()):
 
 
 
+def find_tx_by_string(civicrm, like_data_parsed = None, like_data_raw = None):
+	"""
+	find a bank transaction by a sentinel string
+	returns a list of tx entities
+	"""
+	json_flag = civicrm.json_parameters
+	civicrm.json_parameters = True
+	query = dict()
+	if like_data_parsed:
+		query['data_parsed'] = {'LIKE': like_data_parsed}
+	if like_data_raw:
+		query['data_raw'] = {'LIKE': like_data_raw}
+	entities = civicrm.getEntities('BankingTransaction', query, query.keys())
+	civicrm.json_parameters = json_flag
+	return entities
+
+
+def find_contributions_for_tx(civicrm, tx):
+	"""
+	find the contributions that are connected with the given tx entity
+	"""
+	suggestions_raw = tx.get('suggestions')
+	if suggestions_raw:
+		suggestions = json.loads(suggestions_raw)
+		for suggestion in suggestions:
+			if suggestion.has_key('executed'):
+				# that's the suggestion that has been executed
+				contribution_list = list()
+				# print "Plugin: " + suggestion.get('plugin_id')
+				if suggestion.has_key('contribution_id'):
+					if int(suggestion['contribution_id']):
+						contribution_list.append(int(suggestion['contribution_id']))
+				
+				if suggestion.has_key('contribution_ids'):
+					contribution_ids = suggestion['contribution_ids']
+					if type(contribution_ids) == list:
+						pass
+					elif type(contribution_ids) == str or type(contribution_ids) == unicode:
+						contribution_ids = contribution_ids.split(',')
+					else:
+						raise Exception("Unexpected type in 'contribution_ids' entry: " + str(type(contribution_ids)))
+
+					for contribution_id in contribution_ids:
+						if contribution_id and int(contribution_id):
+							contribution_list.append(int(contribution_id))
+
+				if contribution_list:
+					json_flag = civicrm.json_parameters
+					civicrm.json_parameters = True
+					contributions = civicrm.getEntities('Contribution', {'id': {'IN': contribution_list}}, ['id'])
+					civicrm.json_parameters = json_flag
+					return contributions
+				else:
+					return list()	
+	return list()
+
+
+def find_tx_for_contribution(civicrm, contribution_id):
+	"""
+	finds all bank transactions that are linked to the given contribution
+	"""
+	raise Exception("TODO: Implement")
