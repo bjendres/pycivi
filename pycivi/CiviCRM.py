@@ -1160,9 +1160,11 @@ class CiviCRM:
 			return result['values'][0]['id']
 		else:
 			# tag doesn't exist => create
+			query = dict()
+			query['entity'] = 'Tag'
 			query['action'] = 'create'
-			if description:
-				query['description'] = description
+			query['name'] = tag_name
+			if description: query['description'] = description
 			result = self.performAPICall(query)
 			return result['values'][0]['id']
 
