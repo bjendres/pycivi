@@ -215,9 +215,14 @@ class CiviCRM:
 		entities = list()
 		self.log("Entities found: %s" % result['count'],
 			logging.DEBUG, 'pycivi', 'get', entity_type, first_key, None, time.time()-timestamp)
-		for entity_data in result['values']:
-			entity = self._createEntity(entity_type, entity_data)
-			entities.append(entity)
+		if type(result['values']) == dict:
+			for entity_id in result['values']:
+				entity = self._createEntity(entity_type, result['values'][entity_id])
+				entities.append(entity)
+		else:
+			for entity_data in result['values']:
+				entity = self._createEntity(entity_type, entity_data)
+				entities.append(entity)
 		return entities
 
 
