@@ -89,6 +89,7 @@ class CiviCRM_REST(CiviCRM):
 
 	def performAPICall(self, params=dict(), execParams=dict()):
 		timestamp = time.time()
+		params = params.copy()
 		params['api_key'] = self.user_key
 		params['key'] = self.site_key
 		params['sequential'] = 1
