@@ -37,6 +37,8 @@ import time
 import threading
 import os
 import random
+import dateutil
+import datetime
 import traceback
 from distutils.version import LooseVersion
 
@@ -67,6 +69,7 @@ class CiviCRM_BRIDGED(CiviCRM):
 	def __init__(self, instance, logfile=None, options=dict()):
 		CiviCRM.__init__(self, logfile)
 		self.wrapped_instance = instance
+		self.max_exec_time = 60
 		self.bridge = None
 		self.calls = dict()
 		self.call_base    = random.randint(1000000,9999999)
@@ -79,9 +82,11 @@ class CiviCRM_BRIDGED(CiviCRM):
 			self.auth = HTTPBasicAuth(options['auth_user'], options['auth_pass'])
 
 
+
 	def performAPICall(self, params=dict(), execParams=dict()):
 		callID = self.queueCall(params)
 		return self.fetchCall(callID)
+
 
 	
 	def probe(self):
@@ -89,13 +94,19 @@ class CiviCRM_BRIDGED(CiviCRM):
 		return bridge != None
 
 
+
 	def fetchCall(self, call_id):
 		bridge = self.getBridge()
 		if bridge:
 			url = bridge['fetch_url'] + '&call_id=' + call_id
 			reply = requests.get(url, verify=False, auth=self.auth, headers=self.headers)
-			result = json.loads(reply.text)
-			return result
+
+			if reply.status_code == 404:
+				self.bridgeExpired()
+				return None
+			else:
+				result = json.loads(reply.text)
+				return result
 
 
 
@@ -105,20 +116,40 @@ class CiviCRM_BRIDGED(CiviCRM):
 			call_id = '%s-%06d' % tuple([self.call_base, self.call_counter])
 			self.call_counter += 1
 			url = bridge['push_url'] + '&call_id=' + call_id
-			requests.post(url, data=json.dumps(call_data), verify=False, auth=self.auth, headers=self.headers)
-			return call_id
+			reply = requests.post(url, data=json.dumps(call_data), verify=False, auth=self.auth, headers=self.headers)
+			
+			if reply.status_code == 404:
+				self.bridgeExpired()
+				return None
+			else:
+				return call_id
 		
+
+
+	def bridgeExpired(self):
+		result = self.wrapped_instance.performAPICall({'action': 'delete', 'entity': 'ApiBridge', 'bridge_key': self.bridge['bridge_key']})
+		self.bridge = None
 
 
 
 	def getBridge(self):
 		if self.bridge:
-			return self.bridge
+			# check if expires soon (within max_exec_time)
+			exiration_date = dateutil.parser.parse(self.bridge['expires'])
+			current_time   = datetime.datetime.now()
+			time_diff = exiration_date - current_time
+			if time_diff.total_seconds < self.max_exec_time:
+				# this bridge is running out => close it
+				self.bridgeExpired()
+			else:
+				# this bridge is still fine
+				return self.bridge
 
 		result = self.wrapped_instance.performAPICall({'action': 'create', 'entity': 'ApiBridge'})
 		bridge = result['values']
 		if bridge.get('bridge_key', None):
 			self.bridge = bridge
+			print "NEW BRIDGE"
 			return bridge
 		else:
 			return
