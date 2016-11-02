@@ -57,6 +57,7 @@ if LooseVersion(requests.__version__) < LooseVersion('1.1.0'):
 
 class ApiCallRepeater(object):
 	RETAKES = 0
+	SLEEP = 0
 
 	def __call__(self, method):
 		def new_method(obj, *args, **kwargs):
@@ -66,10 +67,11 @@ class ApiCallRepeater(object):
 				try:
 					result =  method(obj, *args, **kwargs)
 				except CiviAPIException as error:
-					if counter and "response code 500" in error.__str__():
+					if counter and "response code 500" in str(error):
 						retakes = abs(counter - self.RETAKES)
 						obj.log("Response Code 500: Let's try again... ({}/{})".format(retakes, self.RETAKES),
 							logging.WARN, 'ApiCallRepeater', None, None, None, None, None)
+						time.sleep(self.SLEEP)
 					else:
 						raise
 				else:
