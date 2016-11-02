@@ -55,6 +55,32 @@ if LooseVersion(requests.__version__) < LooseVersion('1.1.0'):
 	sys.exit(1)
 
 
+class ApiCallRepeater(object):
+	RETAKES = 0
+
+	def __call__(self, method):
+		def new_method(obj, *args, **kwargs):
+			counter = self.RETAKES
+			while counter:
+				counter -= 1
+				try:
+					result =  method(obj, *args, **kwargs)
+				except CiviAPIException as error:
+					if counter and "response code 500" in error.__str__():
+						retakes = abs(counter - self.RETAKES)
+						obj.log("Response Code 500: Let's try again... ({}/{})".format(retakes, self.RETAKES),
+							logging.WARN, 'ApiCallRepeater', None, None, None, None, None)
+					else:
+						raise
+				else:
+					return result
+			else:
+				return method(obj, *args, **kwargs)
+
+		return new_method
+
+api_call_repeater = ApiCallRepeater()
+
 
 class CiviAPIException(Exception):
 	pass
@@ -87,6 +113,7 @@ class CiviCRM_REST(CiviCRM):
 				self.rest_url = self.url + '/sites/all/modules/civicrm/extern/rest.php'
 
 
+	@api_call_repeater
 	def performAPICall(self, params=dict(), execParams=dict()):
 		timestamp = time.time()
 		params = params.copy()
@@ -149,6 +176,7 @@ class CiviCRM_REST(CiviCRM):
 			return result
 
 
+	@api_call_repeater
 	def performSimpleAPICall(self, params=dict(), execParams=dict()):
 		timestamp = time.time()
 		params['api_key'] = self.user_key
