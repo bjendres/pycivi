@@ -58,6 +58,7 @@ if LooseVersion(requests.__version__) < LooseVersion('1.1.0'):
 class ApiCallRepeater(object):
 	RETAKES = 0
 	SLEEP = 0
+	CODES = range(500, 600)
 
 	def __call__(self, method):
 		def new_method(obj, *args, **kwargs):
@@ -67,9 +68,9 @@ class ApiCallRepeater(object):
 				try:
 					result =  method(obj, *args, **kwargs)
 				except CiviAPIException as error:
-					if counter and "response code 500" in str(error):
+					if counter and error.code in self.CODES:
 						retakes = abs(counter - self.RETAKES)
-						obj.log("Response Code 500: Let's try again... ({}/{})".format(retakes, self.RETAKES),
+						obj.log("Response Code {}: Let's try again... ({}/{})".format(error.code, retakes, self.RETAKES),
 							logging.WARN, 'ApiCallRepeater', None, None, None, None, None)
 						time.sleep(self.SLEEP)
 					else:
@@ -85,7 +86,12 @@ api_call_repeater = ApiCallRepeater()
 
 
 class CiviAPIException(Exception):
-	pass
+	def __init__(self, msg, code=None):
+		self.msg = msg
+		self.code = code
+	def __str__(self):
+		return self.msg
+
 
 class CiviCRM_REST(CiviCRM):
 
@@ -155,7 +161,7 @@ class CiviCRM_REST(CiviCRM):
 		if reply.status_code == 414:
 			raise CiviAPIException("Request is too long, please check server settings or use forcePost")
 		elif reply.status_code != 200:
-			raise CiviAPIException("HTML response code %d received, please check URL" % reply.status_code)
+			raise CiviAPIException("HTML response code %d received, please check URL" % reply.status_code, reply.status_code)
 
 		result = json.loads(reply.text)
 
@@ -198,7 +204,7 @@ class CiviCRM_REST(CiviCRM):
 			logging.DEBUG, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
 
 		if reply.status_code != 200:
-			raise CiviAPIException("HTML response code %d received, please check URL" % reply.status_code)
+			raise CiviAPIException("HTML response code %d received, please check URL" % reply.status_code, reply.status_code)
 
 		try:
 			result = json.loads(reply.text)
