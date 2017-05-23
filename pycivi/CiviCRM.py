@@ -1186,7 +1186,7 @@ class CiviCRM:
 		else:
 			# group doesn't exist => create
 			query['action'] = 'create'
-			query['group_type'] = '[2]'  # set as Mailing Group
+			query['group_type'] = 'Mailing List'  # set as Mailing Group
 			if description:
 				query['description'] = description
 			result = self.performAPICall(query)
