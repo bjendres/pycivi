@@ -151,9 +151,9 @@ class CiviCRM_REST(CiviCRM):
 
 		forcePost = execParams.get('forcePost', False) or self.forcePost
 		if (params['action'] in ['create', 'delete']) or forcePost:
-			reply = requests.post(self.rest_url, params=params, verify=False, auth=self.auth, headers=self.headers)
+			reply = requests.post(self.rest_url, data=params, verify=True, auth=self.auth, headers=self.headers)
 		else:
-			reply = requests.get(self.rest_url, params=params, verify=False, auth=self.auth, headers=self.headers)
+			reply = requests.get(self.rest_url, params=params, verify=True, auth=self.auth, headers=self.headers)
 
 		self.log("API call completed - status: %d, url: '%s'" % (reply.status_code, reply.url),
 			logging.DEBUG, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
@@ -176,7 +176,7 @@ class CiviCRM_REST(CiviCRM):
 				self.log("API call: Undefined fields reported: %s" % str(fields),
 					logging.DEBUG, 'API', params['action'], params['entity'], params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
 
-		if result['is_error']:
+		if result.has_key('is_error') and result['is_error']:
 			self.log("API call error: '%s'" % result['error_message'],
 				logging.ERROR, 'API', params['action'], params['entity'], params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
 			raise CiviAPIException(result['error_message'])
@@ -196,9 +196,9 @@ class CiviCRM_REST(CiviCRM):
 			params['debug'] = 1
 
 		if (params['action'] in ['create', 'delete']) or (execParams.get('forcePost', False)):
-			reply = requests.post(self.rest_url, params=params, verify=False, auth=self.auth)
+			reply = requests.post(self.rest_url, data=params, verify=True, auth=self.auth)
 		else:
-			reply = requests.get(self.rest_url, params=params, verify=False, auth=self.auth)
+			reply = requests.get(self.rest_url, params=params, verify=True, auth=self.auth)
 
 		self.log("API call completed - status: %d, url: '%s'" % (reply.status_code, reply.url),
 			logging.DEBUG, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
