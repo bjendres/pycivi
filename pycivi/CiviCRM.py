@@ -558,7 +558,7 @@ class CiviCRM:
 		elif result['count']==0:
 			field_id = 0
 			self.log(u"Custom field '%s' does not exist." % field_name,
-				logging.DEBUG, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
+				logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
 		else:
 			field_id = result['values'][0]['id']
 			self.log(u"Custom field '%s' resolved to ID %s" % (field_name, field_id),
