@@ -162,7 +162,7 @@ class CiviCRM:
         query = dict()
         first_key = None
         for key in primary_attributes:
-            if attributes.has_key(key):
+            if key in attributes:
                 query[key] = attributes[key]
                 if first_key==None:
                     first_key = attributes[key]
@@ -197,7 +197,7 @@ class CiviCRM:
         query = dict()
         first_key = None
         for key in primary_attributes:
-            if attributes.has_key(key):
+            if key in attributes:
                 query[key] = attributes[key]
                 if first_key==None:
                     first_key = attributes[key]
@@ -243,7 +243,7 @@ class CiviCRM:
     def createOrUpdate(self, entity_type, attributes, update_type='update', primary_attributes=[u'id', u'external_identifier']):
         query = dict()
         for key in primary_attributes:
-            if attributes.has_key(key):
+            if key in attributes:
                 query[key] = attributes[key]
 
         if query:
@@ -286,7 +286,7 @@ class CiviCRM:
         timestamp = time.time()
         query = dict()
         for key in primary_attributes:
-            if attributes.has_key(key):
+            if key in attributes:
                 query[key] = attributes[key]
 
         if query:
@@ -324,15 +324,15 @@ class CiviCRM:
 
     def getContactID(self, attributes, primary_attributes=['external_identifier'], search_deleted=True):
         timestamp = time.time()
-        if attributes.has_key('id'):
+        if 'id' in attributes:
             return attributes['id']
-        elif attributes.has_key('contact_id'):
+        elif 'contact_id' in attributes:
             return attributes['contact_id']
 
         query = dict()
         first_key = None
         for key in primary_attributes:
-            if attributes.has_key(key):
+            if key in attributes:
                 query[key] = attributes[key]
                 if first_key==None:
                     first_key = attributes[key]
@@ -372,13 +372,13 @@ class CiviCRM:
 
     def getEntityID(self, attributes, entity_type, primary_attributes):
         timestamp = time.time()
-        if attributes.has_key('id'):
+        if 'id' in attributes:
             return attributes['id']
 
         query = dict()
         first_key = None
         for key in primary_attributes:
-            if attributes.has_key(key):
+            if key in attributes:
                 query[key] = attributes[key]
                 if first_key==None:
                     first_key = attributes[key]
@@ -412,7 +412,7 @@ class CiviCRM:
         Results will be cached
         """
         timestamp = time.time()
-        if self.lookup_cache.has_key('campaign') and self.lookup_cache['campaign'].has_key(attribute_key) and self.lookup_cache['campaign'][attribute_key].has_key(attribute_value):
+        if 'campaign' in self.lookup_cache and attribute_key in self.lookup_cache['campaign'] and attribute_value in self.lookup_cache['campaign'][attribute_key]:
             return self.lookup_cache['campaign'][attribute_key][attribute_value]
 
         query = dict()
@@ -435,9 +435,9 @@ class CiviCRM:
 
         # store value
         self.lookup_cache_lock.acquire()
-        if not self.lookup_cache.has_key('campaign'):
+        if 'campaign' not in self.lookup_cache:
             self.lookup_cache['campaign'] = dict()
-        if not self.lookup_cache['campaign'].has_key(attribute_key):
+        if attribute_key not in self.lookup_cache['campaign']:
             self.lookup_cache['campaign'][attribute_key] = dict()
         self.lookup_cache['campaign'][attribute_key][attribute_value] = campaign_id
         self.lookup_cache_lock.notifyAll()
@@ -451,7 +451,7 @@ class CiviCRM:
         Get the ID for a given custom field
         """
         timestamp = time.time()
-        if self.lookup_cache.has_key('custom_field') and self.lookup_cache['custom_field'].has_key(field_name):
+        if 'custom_field' in self.lookup_cache and field_name in self.lookup_cache['custom_field']:
             return self.lookup_cache['custom_field'][field_name]
 
         query = dict()
@@ -477,7 +477,7 @@ class CiviCRM:
 
         # store value
         self.lookup_cache_lock.acquire()
-        if not self.lookup_cache.has_key('custom_field'):
+        if 'custom_field' not in self.lookup_cache:
             self.lookup_cache['custom_field'] = dict()
         self.lookup_cache['custom_field'][field_name] = field_id
         self.lookup_cache_lock.notifyAll()
@@ -491,7 +491,7 @@ class CiviCRM:
         Get the ID for a given custom field
         """
         timestamp = time.time()
-        if self.lookup_cache.has_key('custom_group') and self.lookup_cache['custom_group'].has_key(group_name):
+        if 'custom_group' in self.lookup_cache and group_name in self.lookup_cache['custom_group']:
             return self.lookup_cache['custom_group'][group_name]
 
         query = dict()
@@ -515,7 +515,7 @@ class CiviCRM:
 
         # store value
         self.lookup_cache_lock.acquire()
-        if not self.lookup_cache.has_key('custom_group'):
+        if 'custom_group' not in self.lookup_cache:
             self.lookup_cache['custom_group'] = dict()
         self.lookup_cache['custom_group'][group_name] = group_id
         self.lookup_cache_lock.notifyAll()
@@ -530,14 +530,14 @@ class CiviCRM:
         """
         timestamp = time.time()
         lookup_name = u'{0}__{1}'.format(field_name, group_name)
-        if self.lookup_cache.has_key('custom_field') and self.lookup_cache['custom_field'].has_key(lookup_name):
+        if 'custom_field' in self.lookup_cache and lookup_name in self.lookup_cache['custom_field']:
             return self.lookup_cache['custom_field'][lookup_name]
 
         # get group_id
         group_id = self.getCustomGroupID(group_name)
         if not group_id:
             self.lookup_cache_lock.acquire()
-            if not self.lookup_cache.has_key('custom_field'):
+            if 'custom_field' not in self.lookup_cache:
                 self.lookup_cache['custom_field'] = dict()
             self.lookup_cache['custom_field'][lookup_name] = 0
             self.lookup_cache_lock.notifyAll()
@@ -566,7 +566,7 @@ class CiviCRM:
 
         # store value
         self.lookup_cache_lock.acquire()
-        if not self.lookup_cache.has_key('custom_field'):
+        if 'custom_field' not in self.lookup_cache:
             self.lookup_cache['custom_field'] = dict()
         self.lookup_cache['custom_field'][lookup_name] = field_id
         self.lookup_cache_lock.notifyAll()
@@ -598,7 +598,7 @@ class CiviCRM:
             return
 
         # get the associated option group id
-        if self.lookup_cache.has_key('custom_field_optiongroup') and self.lookup_cache['custom_field_optiongroup'].has_key(field_name):
+        if 'custom_field_optiongroup' in self.lookup_cache and field_name in self.lookup_cache['custom_field_optiongroup']:
             option_group_id = self.lookup_cache['custom_field_optiongroup'][field_name]
         else:
             query = dict()
@@ -616,7 +616,7 @@ class CiviCRM:
             elif result['count']==0:
                 self.log(u"Custom field '%s' does not exist." % field_name,
                     logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
-            elif not result['values'][0].has_key('option_group_id'):
+            elif 'option_group_id' not in result['values'][0]:
                 self.log(u"Custom field '%s' is not a option_value type field." % field_name,
                     logging.WARN, 'API', 'get', 'CustomField', None, None, time.time()-timestamp)
             else:
@@ -626,7 +626,7 @@ class CiviCRM:
 
             # store value
             self.lookup_cache_lock.acquire()
-            if not self.lookup_cache.has_key('custom_field_optiongroup'):
+            if 'custom_field_optiongroup' not in self.lookup_cache:
                 self.lookup_cache['custom_field_optiongroup'] = dict()
             self.lookup_cache['custom_field_optiongroup'][field_name] = option_group_id
             self.lookup_cache_lock.notifyAll()
@@ -682,7 +682,7 @@ class CiviCRM:
         Get the ID for a given option group
         """
         timestamp = time.time()
-        if self.lookup_cache.has_key('option_group') and self.lookup_cache['option_group'].has_key(group_name):
+        if 'option_group' in self.lookup_cache and group_name in self.lookup_cache['option_group']:
             return self.lookup_cache['option_group'][group_name]
 
         query = dict()
@@ -707,7 +707,7 @@ class CiviCRM:
 
         # store value
         self.lookup_cache_lock.acquire()
-        if not self.lookup_cache.has_key('option_group'):
+        if 'option_group' not in self.lookup_cache:
             self.lookup_cache['option_group'] = dict()
         self.lookup_cache['option_group'][group_name] = group_id
         self.lookup_cache_lock.notifyAll()
@@ -721,7 +721,7 @@ class CiviCRM:
         Get the ID for a given option value
         """
         timestamp = time.time()
-        if self.lookup_cache.has_key('option_value_id') and self.lookup_cache['option_value_id'].has_key(option_group_id) and self.lookup_cache['option_value_id'][option_group_id].has_key(name):
+        if 'option_value_id' in self.lookup_cache and option_group_id in self.lookup_cache['option_value_id'] and name in self.lookup_cache['option_value_id'][option_group_id]:
             return self.lookup_cache['option_value_id'][option_group_id][name]
 
         query = dict()
@@ -749,9 +749,9 @@ class CiviCRM:
         # store value
         if value_id:
             self.lookup_cache_lock.acquire()
-            if not self.lookup_cache.has_key('option_value_id'):
+            if 'option_value_id' not in self.lookup_cache:
                 self.lookup_cache['option_value_id'] = dict()
-            if not self.lookup_cache['option_value_id'].has_key(option_group_id):
+            if option_group_id not in self.lookup_cache['option_value_id']:
                 self.lookup_cache['option_value_id'][option_group_id] = dict()
             self.lookup_cache['option_value_id'][option_group_id][name] = value_id
             self.lookup_cache_lock.notifyAll()
@@ -765,7 +765,7 @@ class CiviCRM:
         Get the 'value' for a given option value
         """
         timestamp = time.time()
-        if self.lookup_cache.has_key('option_value') and self.lookup_cache['option_value'].has_key(option_group_id) and self.lookup_cache['option_value'][option_group_id].has_key(name):
+        if 'option_value' in self.lookup_cache and option_group_id in self.lookup_cache['option_value'] and name in self.lookup_cache['option_value'][option_group_id]:
             return self.lookup_cache['option_value'][option_group_id][name]
 
         query = dict()
@@ -791,9 +791,9 @@ class CiviCRM:
 
         # store value
         self.lookup_cache_lock.acquire()
-        if not self.lookup_cache.has_key('option_value'):
+        if 'option_value' not in self.lookup_cache:
             self.lookup_cache['option_value'] = dict()
-        if not self.lookup_cache['option_value'].has_key(option_group_id):
+        if option_group_id not in self.lookup_cache['option_value']:
             self.lookup_cache['option_value'][option_group_id] = dict()
         self.lookup_cache['option_value'][option_group_id][name] = value
         self.lookup_cache_lock.notifyAll()
@@ -819,9 +819,9 @@ class CiviCRM:
         # store value
         value_id = result['values'][0]['value']
         self.lookup_cache_lock.acquire()
-        if not self.lookup_cache.has_key('option_value'):
+        if 'option_value' not in self.lookup_cache:
             self.lookup_cache['option_value'] = dict()
-        if not self.lookup_cache['option_value'].has_key(option_group_id):
+        if option_group_id not in self.lookup_cache['option_value']:
             self.lookup_cache['option_value'][option_group_id] = dict()
         self.lookup_cache['option_value'][option_group_id][name] = value_id
         self.lookup_cache_lock.notifyAll()
@@ -832,7 +832,7 @@ class CiviCRM:
 
     def getLocationTypeID(self, location_name):
         # first: look up in cache
-        if self.lookup_cache.has_key('location_type2id') and self.lookup_cache['location_type2id'].has_key(location_name):
+        if 'location_type2id' in self.lookup_cache and location_name in self.lookup_cache['location_type2id']:
             return self.lookup_cache['location_type2id'][location_name]
 
         timestamp = time.time()
@@ -853,7 +853,7 @@ class CiviCRM:
             self.log("Location type '%s' resolved to id %s." % (location_name, location_id),
                 logging.ERROR, 'API', 'get', 'LocationType', location_id, None, time.time()-timestamp)
         self.lookup_cache_lock.acquire()
-        if not self.lookup_cache.has_key('location_type2id'):
+        if 'location_type2id' not in self.lookup_cache:
             self.lookup_cache['location_type2id'] = dict()
         self.lookup_cache['location_type2id'][location_name] = location_id
         self.lookup_cache_lock.notifyAll()
@@ -863,7 +863,7 @@ class CiviCRM:
 
     def getMembershipStatusID(self, membership_status_name):
         # first: look up in cache
-        if self.lookup_cache.has_key('membership_status2id') and self.lookup_cache['membership_status2id'].has_key(membership_status_name):
+        if 'membership_status2id' in self.lookup_cache and membership_status_name in self.lookup_cache['membership_status2id']:
             return self.lookup_cache['membership_status2id'][membership_status_name]
 
         timestamp = time.time()
@@ -885,7 +885,7 @@ class CiviCRM:
                 logging.DEBUG, 'API', 'get', 'MembershipStatus', None, None, time.time()-timestamp)
 
         self.lookup_cache_lock.acquire()
-        if not self.lookup_cache.has_key('membership_status2id'):
+        if 'membership_status2id' not in self.lookup_cache:
             self.lookup_cache['membership_status2id'] = dict()
         self.lookup_cache['membership_status2id'][membership_status_name] = status_id
         self.lookup_cache_lock.notifyAll()
@@ -895,7 +895,7 @@ class CiviCRM:
 
     def getMembershipTypeID(self, membership_type_name):
         # first: look up in cache
-        if self.lookup_cache.has_key('membership_type2id') and self.lookup_cache['membership_type2id'].has_key(membership_type_name):
+        if 'membership_type2id' in self.lookup_cache and membership_type_name in self.lookup_cache['membership_type2id']:
             return self.lookup_cache['membership_type2id'][membership_type_name]
 
         timestamp = time.time()
@@ -917,7 +917,7 @@ class CiviCRM:
                 logging.DEBUG, 'API', 'get', 'MembershipTypes', None, None, time.time()-timestamp)
 
         self.lookup_cache_lock.acquire()
-        if not self.lookup_cache.has_key('membership_type2id'):
+        if 'membership_type2id' not in self.lookup_cache:
             self.lookup_cache['membership_type2id'] = dict()
         self.lookup_cache['membership_type2id'][membership_type_name] = type_id
         self.lookup_cache_lock.notifyAll()
@@ -927,7 +927,7 @@ class CiviCRM:
 
     def getFinancialTypeID(self, financial_type_name):
         # first: look up in cache
-        if self.lookup_cache.has_key('financial_type2id') and self.lookup_cache['financial_type2id'].has_key(financial_type_name):
+        if 'financial_type2id' in self.lookup_cache and financial_type_name in self.lookup_cache['financial_type2id']:
             return self.lookup_cache['financial_type2id'][financial_type_name]
 
         timestamp = time.time()
@@ -949,7 +949,7 @@ class CiviCRM:
                 logging.DEBUG, 'API', 'get', 'FinancialType', None, None, time.time()-timestamp)
 
         self.lookup_cache_lock.acquire()
-        if not self.lookup_cache.has_key('financial_type2id'):
+        if 'financial_type2id' not in self.lookup_cache:
             self.lookup_cache['financial_type2id'] = dict()
         self.lookup_cache['financial_type2id'][financial_type_name] = type_id
         self.lookup_cache_lock.notifyAll()

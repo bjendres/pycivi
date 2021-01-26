@@ -77,7 +77,7 @@ class CiviCRM_BRIDGED(CiviCRM):
 
         self.auth = None
         self.headers = {}
-        if options.has_key('auth_user') and options.has_key('auth_pass'):
+        if 'auth_user' in options and 'auth_pass' in options:
             from requests.auth import HTTPBasicAuth
             self.auth = HTTPBasicAuth(options['auth_user'], options['auth_pass'])
 

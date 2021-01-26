@@ -125,7 +125,7 @@ def _get_or_create_from_params(name, parameters, create_entry=dict()):
     return entry
 
 def _prepare_parameters(parameters):
-    if not parameters.has_key('lock'):
+    if 'lock' not in parameters:
         parameters['lock'] = threading.Condition()
 
 
@@ -146,13 +146,13 @@ def import_contributions(civicrm, record_source, parameters=dict()):
     for record in record_source:
         update = dict(record)
         # lookup contact_id
-        if update.has_key('contact_external_identifier'):
+        if 'contact_external_identifier' in update:
             if update['contact_external_identifier']:
                 update['contact_id'] = civicrm.getContactID({'external_identifier': update['contact_external_identifier']})
             del update['contact_external_identifier']
-        if not update.has_key('contact_id') or not update['contact_id']:
+        if 'contact_id' not in update or not update['contact_id']:
 
-            if parameters.has_key('fallback_contact'):
+            if 'fallback_contact' in parameters:
                 update['contact_id'] = parameters['fallback_contact']
                 civicrm.log(u"Contact not found! Will be attributed to fallback contact %s" % str(parameters['fallback_contact']),
                     logging.INFO, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
@@ -162,17 +162,17 @@ def import_contributions(civicrm, record_source, parameters=dict()):
                 continue
 
         # lookup payment type
-        if update.has_key('payment_instrument'):
+        if 'payment_instrument' in update:
             if update['payment_instrument']:
                 update['payment_instrument_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('payment_instrument'), update['payment_instrument'])
             del update['payment_instrument']
-        if not update.has_key('payment_instrument_id') or not update['payment_instrument_id']:
+        if 'payment_instrument_id' not in update or not update['payment_instrument_id']:
             civicrm.log(u"Payment type ID not found! No valid payment type specified in (%s)" % unicode(str(record), 'utf8'),
                 logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
             continue
 
         # lookup campaign
-        if update.has_key('contribution_campaign'):
+        if 'contribution_campaign' in update:
             if update['contribution_campaign']:
                 update['contribution_campaign_id'] = civicrm.getCampaignID(update['contribution_campaign'], attribute_key=campaign_identifier)
                 if not update['contribution_campaign_id']:
@@ -181,11 +181,11 @@ def import_contributions(civicrm, record_source, parameters=dict()):
             del update['contribution_campaign']
 
         # lookup contribution status
-        if update.has_key('contribution_status'):
+        if 'contribution_status' in update:
             if update['contribution_status']:
                 update['contribution_status_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('contribution_status'), update['contribution_status'])
             del update['contribution_status']
-        if not update.has_key('contribution_status_id') or not update['contribution_status_id']:
+        if 'contribution_status_id' not in update or not update['contribution_status_id']:
             civicrm.log(u"Contribution status ID not found! No valid contribution status specified in (%s)" % unicode(str(record), 'utf8'),
                 logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
             continue
@@ -214,13 +214,13 @@ def import_rcontributions(civicrm, record_source, parameters=dict()):
     for record in record_source:
         update = dict(record)
         # lookup contact_id
-        if update.has_key('contact_external_identifier'):
+        if 'contact_external_identifier' in update:
             if update['contact_external_identifier']:
                 update['contact_id'] = civicrm.getContactID({'external_identifier': update['contact_external_identifier']})
             del update['contact_external_identifier']
-        if not update.has_key('contact_id') or not update['contact_id']:
+        if 'contact_id' not in update or not update['contact_id']:
 
-            if parameters.has_key('fallback_contact'):
+            if 'fallback_contact' in parameters:
                 update['contact_id'] = parameters['fallback_contact']
                 civicrm.log(u"Contact not found! Will be attributed to fallback contact %s" % str(parameters['fallback_contact']),
                     logging.INFO, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
@@ -230,17 +230,17 @@ def import_rcontributions(civicrm, record_source, parameters=dict()):
                 continue
 
         # lookup payment type
-        if update.has_key('payment_instrument'):
+        if 'payment_instrument' in update:
             if update['payment_instrument']:
                 update['payment_instrument_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('payment_instrument'), update['payment_instrument'])
             del update['payment_instrument']
-        if not update.has_key('payment_instrument_id') or not update['payment_instrument_id']:
+        if 'payment_instrument_id' not in update or not update['payment_instrument_id']:
             civicrm.log(u"Payment type ID not found! No valid payment type specified in (%s)" % unicode(str(record), 'utf8'),
                 logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
             continue
 
         # lookup campaign
-        if update.has_key('contribution_campaign'):
+        if 'contribution_campaign' in update:
             if update['contribution_campaign']:
                 update['contribution_campaign_id'] = civicrm.getCampaignID(update['contribution_campaign'], attribute_key=campaign_identifier)
                 if not update['contribution_campaign_id']:
@@ -249,11 +249,11 @@ def import_rcontributions(civicrm, record_source, parameters=dict()):
             del update['contribution_campaign']
 
         # lookup contribution status
-        if update.has_key('contribution_status'):
+        if 'contribution_status' in update:
             if update['contribution_status']:
                 update['contribution_status_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('contribution_status'), update['contribution_status'])
             del update['contribution_status']
-        if not update.has_key('contribution_status_id') or not update['contribution_status_id']:
+        if 'contribution_status_id' not in update or not update['contribution_status_id']:
             civicrm.log(u"Contribution status ID not found! No valid contribution status specified in (%s)" % unicode(str(record), 'utf8'),
                 logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
             continue
@@ -278,26 +278,26 @@ def import_campaigns(civicrm, record_source, parameters=dict()):
 
         update = dict(record)
         # lookup campaign type
-        if update.has_key('campaign_type'):
+        if 'campaign_type' in update:
             if update['campaign_type']:
                 update['campaign_type_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('campaign_type'), update['campaign_type'])
             del update['campaign_type']
-        if not update.has_key('campaign_type_id') or not update['campaign_type_id']:
+        if 'campaign_type_id' not in update or not update['campaign_type_id']:
             civicrm.log(u"Campaign type ID not identified! No valid campaign type specified in (%s)" % unicode(str(record), 'utf8'),
                 logging.ERROR, 'importer', 'import_campaigns', 'Campaign', None, None, time.time()-timestamp)
             continue
 
         # lookup campaign status
-        if update.has_key('status'):
+        if 'status' in update:
             if update['status']:
                 update['status_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('campaign_status'), update['status'])
             del update['status']
-        if not update.has_key('campaign_type_id') or not update['campaign_type_id']:
+        if 'campaign_type_id' not in update or not update['campaign_type_id']:
             civicrm.log(u"Campaign status ID not identified! No valid campaign status specified in (%s)" % unicode(str(record), 'utf8'),
                 logging.ERROR, 'importer', 'import_campaigns', 'Campaign', None, None, time.time()-timestamp)
             continue
 
-        if parameters.has_key('id'):
+        if 'id' in parameters:
             entity = civicrm.createOrUpdate(entity_type, update, update_mode, [parameters['id']])
         else:
             entity = civicrm.createOrUpdate(entity_type, update, update_mode)
@@ -402,11 +402,11 @@ def import_contact_address(civicrm, record_source, parameters=dict()):
             continue
 
         # get the location type id
-        if (not record.has_key('location_type_id')):
+        if ('location_type_id' not in record):
             location_type = record.get('location_type', parameters.get('location_type', 'Main'))
             location_type_dict = _get_or_create_from_params('location_type_dict', parameters)
 
-            if location_type_dict.has_key(location_type):
+            if location_type in location_type_dict:
                 record['location_type_id'] = location_type_dict[location_type]
             else:
                 record['location_type_id'] = civicrm.getLocationTypeID(location_type)
@@ -534,13 +534,13 @@ def import_contact_website(civicrm, record_source, parameters=dict()):
             continue
 
         # get the website type id
-        if (not record.has_key('website_type_id')):
-            if record.has_key('website_type'):
+        if ('website_type_id' not in record):
+            if 'website_type' in record:
                 if record['website_type']:
                     record['website_type_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('website_type'), record['website_type'])
                 del record['website_type']
 
-        if (not record.has_key('website_type_id')):
+        if ('website_type_id' not in record):
             civicrm.log(u"Could not write contact website, website type '%s' could not be resolved" % record.get('website_type', ''),
                 logging.WARN, 'importer', 'import_contact_website', 'Website', None, None, time.time()-timestamp)
             continue
@@ -620,11 +620,11 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
             continue
 
         # get the location type id
-        if (not record.has_key('location_type_id')):
+        if ('location_type_id' not in record):
             location_type = record.get('location_type', parameters.get('location_type', 'Main'))
             location_type_dict = _get_or_create_from_params('location_type_dict', parameters)
 
-            if location_type_dict.has_key(location_type):
+            if location_type in location_type_dict:
                 record['location_type_id'] = location_type_dict[location_type]
             else:
                 record['location_type_id'] = civicrm.getLocationTypeID(location_type)
@@ -635,7 +635,7 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
                 continue
 
         # get phone-type-id
-        if not record.has_key('phone_type_id'):
+        if 'phone_type_id' not in record:
             phone_type = record.get('phone_type', parameters.get('phone_type', 'Phone'))
 
             option_group_id = civicrm.getOptionGroupID('phone_type')
@@ -675,11 +675,11 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
                     logging.ERROR, 'importer', 'import_contact_phone', 'Phone', None, record['contact_id'], time.time()-timestamp)
 
             if not no_update and phone_number:
-                if record.has_key('location_type'):
+                if 'location_type' in record:
                     del record['location_type']
-                if record.has_key('location_type_id'):
+                if 'location_type_id' in record:
                     del record['location_type_id']
-                if record.has_key('external_identifier'):
+                if 'external_identifier' in record:
                     del record['external_identifier']
 
                 changed = phone_number.update(record, store=True)
@@ -813,11 +813,11 @@ def import_contact_email(civicrm, record_source, parameters=dict()):
             continue
 
         # get the location type id
-        if (not record.has_key('location_type_id')):
+        if ('location_type_id' not in record):
             location_type = record.get('location_type', parameters.get('location_type', 'Main'))
             location_type_dict = _get_or_create_from_params('location_type_dict', parameters)
 
-            if location_type_dict.has_key(location_type):
+            if location_type in location_type_dict:
                 record['location_type_id'] = location_type_dict[location_type]
             else:
                 record['location_type_id'] = civicrm.getLocationTypeID(location_type)
@@ -850,11 +850,11 @@ def import_contact_email(civicrm, record_source, parameters=dict()):
             # find and update/replace the email with the given contact
             email = civicrm.getEmail(record['contact_id'], record['location_type_id'])
             if not no_update and email:
-                if record.has_key('location_type'):
+                if 'location_type' in record:
                     del record['location_type']
-                if record.has_key('location_type_id'):
+                if 'location_type_id' in record:
                     del record['location_type_id']
-                if record.has_key('external_identifier'):
+                if 'external_identifier' in record:
                     del record['external_identifier']
                 changed = email.update(record, store=True)
                 if changed:
@@ -888,7 +888,7 @@ def import_membership(civicrm, record_source, parameters=dict()):
     """
     _prepare_parameters(parameters)
     membership_primary_attributes=[u'contact_id']
-    if parameters.has_key('multiple') and parameters['multiple']:
+    if 'multiple' in parameters and parameters['multiple']:
         # multiple means, that we allow multiple membership types per contact
         membership_primary_attributes.append(u'membership_type_id')
         membership_primary_attributes.append(u'membership_type')
@@ -902,7 +902,7 @@ def import_membership(civicrm, record_source, parameters=dict()):
             continue
 
         record['is_override'] = 1     # write status as-is
-        if record.has_key('status'):
+        if 'status' in record:
             status_id = civicrm.getMembershipStatusID(record['status'])
             if not status_id:
                 civicrm.log(u"Membership status '%s' does not exist!" % record['status'],
@@ -1081,7 +1081,7 @@ def import_delete_entity(civicrm, record_source, parameters=dict()):
     for record in record_source:
         # lookup contact_id
         for external_identifier in ['contact_external_identifier', 'external_identifier']:
-            if record.has_key(external_identifier):
+            if external_identifier in record:
                 if record[external_identifier]:
                     record['contact_id'] = civicrm.getContactID({'external_identifier': record[external_identifier]})
                 del record[external_identifier]
@@ -1094,7 +1094,7 @@ def import_delete_entity(civicrm, record_source, parameters=dict()):
                     continue
 
         # lookup location_type
-        if record.has_key('location_type') and not record.has_key('location_type_id'):
+        if 'location_type' in record and 'location_type_id' not in record:
             record['location_type_id'] = civicrm.getLocationTypeID(record['location_type'])
             del record['location_type']
             if 'location_type' in identifiers:

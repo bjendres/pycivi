@@ -106,7 +106,7 @@ class CiviCRM_REST(CiviCRM):
         self.headers = {}
         self.json_parameters = False
 
-        if options.has_key('auth_user') and options.has_key('auth_pass'):
+        if 'auth_user' in options and 'auth_pass' in options:
             from requests.auth import HTTPBasicAuth
             self.auth = HTTPBasicAuth(options['auth_user'], options['auth_pass'])
 
@@ -170,13 +170,13 @@ class CiviCRM_REST(CiviCRM):
         self._api_calls += 1
         self._api_calls_time += runtime
 
-        if result.has_key('undefined_fields'):
+        if 'undefined_fields' in result:
             fields = result['undefined_fields']
             if fields:
                 self.log("API call: Undefined fields reported: %s" % str(fields),
                     logging.DEBUG, 'API', params['action'], params['entity'], params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
 
-        if result.has_key('is_error') and result['is_error']:
+        if 'is_error' in result and result['is_error']:
             self.log("API call error: '%s'" % result['error_message'],
                 logging.ERROR, 'API', params['action'], params['entity'], params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
             raise CiviAPIException(result['error_message'])
@@ -218,7 +218,7 @@ class CiviCRM_REST(CiviCRM):
         self._api_calls += 1
         self._api_calls_time += runtime
 
-        if result.has_key('undefined_fields'):
+        if 'undefined_fields' in result:
             fields = result['undefined_fields']
             if fields:
                 self.log("API call: Undefined fields reported: %s" % str(fields),

@@ -69,9 +69,9 @@ def import_bank_accounts(civicrm, record_source, parameters=dict()):
     """
     multiple_BAs = parameters.get('multiple_BAs', False)
     for record in record_source:
-        if not record.has_key('id'):
+        if 'id' not in record:
             # we'll have to look for an ID
-            if not record.has_key('contact_id'):
+            if 'contact_id' not in record:
                 # ...an external one, apparently
                 record['contact_id'] = civicrm.getContactID({'external_identifier': record['external_identifier']})
 
@@ -116,9 +116,9 @@ def import_bank_accounts(civicrm, record_source, parameters=dict()):
 
             # adjust timestamps, if necessary (they get set automatically to "now" on creation)
             timestamps = dict()
-            if account_data.has_key('modified_date'):
+            if 'modified_date' in account_data:
                 timestamps['modified_date'] = datetime.datetime.strptime(account_data['modified_date'], "%Y-%m-%d").strftime('%Y%m%d%H%M%S')
-            if account_data.has_key('created_date'):
+            if 'created_date' in account_data:
                 timestamps['created_date'] = datetime.datetime.strptime(account_data['created_date'], "%Y-%m-%d").strftime('%Y%m%d%H%M%S')
             account.update(timestamps, True)
             civicrm.log("Created new bank account [%s]" % account.get('id'),
@@ -135,7 +135,7 @@ def import_bank_accounts(civicrm, record_source, parameters=dict()):
             
             if account.update(account_data):
                 # something has changed: update modification date
-                if not account_data.has_key('modified_date'):
+                if 'modified_date' not in account_data:
                     account.set('modified_date', datetime.datetime.now().strftime('%Y%m%d%H%M%S'))
                 else:
                     account.set('modified_date', account_data['modified_date'])
@@ -181,15 +181,15 @@ def import_sepa_mandates(civicrm, record_source, parameters=dict()):
     contrib_keys = set(["contact_id", "financial_type_id", "contribution_page_id", "payment_instrument_id", "total_amount", "non_deductible_amount", "fee_amount", "net_amount", "trxn_id", "invoice_id", "currency", "cancel_date", "cancel_reason", "receipt_date", "thankyou_date", "source", "amount_level", "honor_contact_id", "is_test", "is_pay_later", "honor_type_id", "address_id", "check_number", "campaign_id"]) # contribution_recur_id, contribution_status_id
 
     # perform some sanity checks
-    if not parameters.has_key('sepa_creditor_id'): 
+    if 'sepa_creditor_id' not in parameters:
         civicrm.log("No sepa_creditor_id specified for import.",
             logging.ERROR, 'importer', 'import_sepa_mandates', 'SepaMandate', None, None, 0)
         return
-    if not parameters.has_key('payment_instrument_id'): 
+    if 'payment_instrument_id' not in parameters:
         civicrm.log("No payment_instrument_id specified for import.",
             logging.ERROR, 'importer', 'import_sepa_mandates', 'SepaMandate', None, None, 0)
         return
-    if not parameters.has_key('payment_processor_id'): 
+    if 'payment_processor_id' not in parameters:
         civicrm.log("No payment_processor_id specified for import.",
             logging.ERROR, 'importer', 'import_sepa_mandates', 'SepaMandate', None, None, 0)
         return
@@ -317,15 +317,15 @@ def find_contributions_for_tx(civicrm, tx):
     if suggestions_raw:
         suggestions = json.loads(suggestions_raw)
         for suggestion in suggestions:
-            if suggestion.has_key('executed'):
+            if 'executed' in suggestion:
                 # that's the suggestion that has been executed
                 contribution_list = list()
                 # print "Plugin: " + suggestion.get('plugin_id')
-                if suggestion.has_key('contribution_id'):
+                if 'contribution_id' in suggestion:
                     if int(suggestion['contribution_id']):
                         contribution_list.append(int(suggestion['contribution_id']))
                 
-                if suggestion.has_key('contribution_ids'):
+                if 'contribution_ids' in suggestion:
                     contribution_ids = suggestion['contribution_ids']
                     if type(contribution_ids) == list:
                         pass

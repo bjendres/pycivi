@@ -83,7 +83,7 @@ class CiviCRM_DRUSH(CiviCRM):
             self._api_calls += 1
             self._api_calls_time += runtime
 
-            if result.has_key('undefined_fields'):
+            if 'undefined_fields' in result:
                 fields = result['undefined_fields']
                 if fields:
                     self.log("API call: Undefined fields reported: %s" % str(fields), 

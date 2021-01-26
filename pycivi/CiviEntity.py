@@ -88,7 +88,7 @@ class CiviEntity:
     def replace(self, attributes, store=False):
         changed = dict()
         for key in attributes.keys():
-            if self.attributes.has_key(key):
+            if key in self.attributes:
                 if (self.attributes[key]!=attributes[key]):
                     self.attributes[key] = attributes[key]
                     changed[key] = self.attributes[key]
@@ -111,7 +111,7 @@ class CiviEntity:
         # find the fields that have changed
         changes = dict()
         for key in self.attributes:
-            if not current_state.has_key(key) or self.attributes[key]!=current_state[key]:
+            if key not in current_state or self.attributes[key]!=current_state[key]:
                 changes[key] = self.attributes[key]
 
         if changes:
