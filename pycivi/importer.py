@@ -52,7 +52,7 @@ class UTF8Recoder:
     def __iter__(self):
         return self
 
-    def next(self):
+    def __next__(self):
         return self.reader.next().encode("utf-8")
 
 class UnicodeReader:
@@ -65,8 +65,8 @@ class UnicodeReader:
         f = UTF8Recoder(f, encoding)
         self.reader = csv.reader(f, dialect=dialect, **kwds)
 
-    def next(self):
-        row = self.reader.next()
+    def __next__(self):
+        row = next(self.reader)
         return [unicode(s, "utf-8") for s in row]
 
     def __iter__(self):
@@ -86,12 +86,12 @@ class CSVRecordSource:
     def __iter__(self):
         # I know this is a dirty hack... sorry about that
         self.row_iterator = self.reader.__iter__()
-        self.header = self.row_iterator.next()
+        self.header = next(self.row_iterator)
         return self
 
-    def next(self):
+    def __next__(self):
         if self.row_iterator:
-            row = self.row_iterator.next()
+            row = next(self.row_iterator)
 
             # build record
             record = dict()
@@ -1148,7 +1148,7 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
     record_source_iterator = record_source.__iter__()
     for i in range(5 * workers):
         try:
-            record_list.append(record_source_iterator.next())
+            record_list.append(next(record_source_iterator))
         except:
             break
 
@@ -1205,7 +1205,7 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
         record_list_lock.acquire()
         record_list_lock.wait()
         try:
-            record_list.append(record_source_iterator.next())
+            record_list.append(next(record_source_iterator))
         except:
             remaining_records = False
         record_list_lock.release()
