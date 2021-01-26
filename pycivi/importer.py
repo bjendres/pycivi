@@ -1015,7 +1015,7 @@ def import_entity_tags(civicrm, record_source, parameters=dict()):
 
 
         tag_ids = parameters.get('tag_ids', None)
-         allFound = False
+        allFound = False
         if not tag_ids==None:
             # find the tags
             allFound = True
