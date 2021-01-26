@@ -29,7 +29,7 @@ __maintainer__  = "Björn Endres"
 __email__       = "endres[at]systopia.de"
 
 
-import CiviCRM, entity_type
+from . import CiviCRM, entity_type
 import csv
 import codecs
 import threading
@@ -39,7 +39,7 @@ import traceback
 import datetime
 import sha
 
-from CiviCRM import CiviAPIException
+from .CiviCRM import CiviAPIException
 
 
 class UTF8Recoder:

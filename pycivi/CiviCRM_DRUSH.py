@@ -32,7 +32,7 @@ __email__       = "endres[at]systopia.de"
 import logging
 import sys
 import json
-import entity_type as etype
+from . import entity_type as etype
 import time
 import threading
 import os
@@ -40,8 +40,8 @@ import traceback
 import subprocess
 
 
-from CiviEntity import *
-from CiviCRM import CiviCRM
+from .CiviEntity import *
+from .CiviCRM import CiviCRM
 
 class CiviAPIException(Exception):
     pass

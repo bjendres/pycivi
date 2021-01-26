@@ -28,7 +28,7 @@ __license__     = "GPLv3"
 __maintainer__  = "Björn Endres"
 __email__       = "endres[at]systopia.de"
 
-import entity_type
+from . import entity_type
 import logging
 
 class CiviEntity:

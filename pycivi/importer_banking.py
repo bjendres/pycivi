@@ -30,9 +30,9 @@ __email__       = "endres[at]systopia.de"
 
 
 
-from importer import *
+from .importer import *
 
-import CiviCRM, entity_type
+from . import CiviCRM, entity_type
 import csv
 import codecs
 import threading

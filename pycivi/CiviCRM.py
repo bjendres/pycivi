@@ -33,13 +33,13 @@ import requests
 import logging
 import sys
 import json
-import entity_type as etype
+from . import entity_type as etype
 import time
 import threading
 import os
 import traceback
 
-from CiviEntity import *
+from .CiviEntity import *
 
 class CiviAPIException(Exception):
     pass

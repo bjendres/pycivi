@@ -29,7 +29,7 @@ __maintainer__  = "Björn Endres"
 __email__       = "endres[at]systopia.de"
 
 
-import CiviCRM
+from . import CiviCRM
 
 # map class implementation to top level
 CiviCRM = CiviCRM.CiviCRM
