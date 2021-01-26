@@ -100,7 +100,7 @@ def import_bank_accounts(civicrm, record_source, parameters=dict()):
                 account_data[key] = record[key]
 
         # find the account by its reference
-        account_reference_type = refs.keys()[0]
+        account_reference_type = list(refs.keys())[0]
         account_reference_data = dict()
         account_reference_data['reference'] = refs[account_reference_type]
         account_reference_data['reference_type_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('civicrm_banking.reference_types'), account_reference_type)
@@ -304,7 +304,7 @@ def find_tx_by_string(civicrm, like_data_parsed = None, like_data_raw = None):
         query['data_parsed'] = {'LIKE': like_data_parsed}
     if like_data_raw:
         query['data_raw'] = {'LIKE': like_data_raw}
-    entities = civicrm.getEntities('BankingTransaction', query, query.keys())
+    entities = civicrm.getEntities('BankingTransaction', query, list(query.keys()))
     civicrm.json_parameters = json_flag
     return entities
 
