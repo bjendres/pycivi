@@ -159,7 +159,7 @@ class CiviContactEntity(CiviTaggableEntity):
                 for pending_contribution in pending_contributions['values']:
                     keep_going = True
                     entity = civi._createEntity(entity_type.CONTRIBUTION, pending_contribution)
-                    print "Deleting related contribution", str(entity)
+                    print("Deleting related contribution", str(entity))
                     entity.delete()
 
         # now delte the contact

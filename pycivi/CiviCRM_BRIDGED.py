@@ -49,13 +49,13 @@ from .CiviCRM import CiviCRM
 try:
     import requests
 except ImportError as err:
-    print "ERROR: Cannot import requests"
-    print err
+    print("ERROR: Cannot import requests")
+    print(err)
     sys.exit(1)
 
 if LooseVersion(requests.__version__) < LooseVersion('1.1.0'):
-    print "ERROR: You need requests >= 1.1.0"
-    print "You've got {0}".format(requests.__version__)
+    print("ERROR: You need requests >= 1.1.0")
+    print("You've got {0}".format(requests.__version__))
     sys.exit(1)
 
 
@@ -149,7 +149,7 @@ class CiviCRM_BRIDGED(CiviCRM):
         bridge = result['values']
         if bridge.get('bridge_key', None):
             self.bridge = bridge
-            print "NEW BRIDGE"
+            print("NEW BRIDGE")
             return bridge
         else:
             return
