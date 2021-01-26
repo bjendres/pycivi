@@ -67,7 +67,7 @@ class UnicodeReader:
 
     def __next__(self):
         row = next(self.reader)
-        return [unicode(s, "utf-8") for s in row]
+        return [str(s, "utf-8") for s in row]
 
     def __iter__(self):
         return self
@@ -154,10 +154,10 @@ def import_contributions(civicrm, record_source, parameters=dict()):
 
             if 'fallback_contact' in parameters:
                 update['contact_id'] = parameters['fallback_contact']
-                civicrm.log(u"Contact not found! Will be attributed to fallback contact %s" % str(parameters['fallback_contact']),
+                civicrm.log("Contact not found! Will be attributed to fallback contact %s" % str(parameters['fallback_contact']),
                     logging.INFO, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
             else:
-                civicrm.log(u"Contact not found! No valid contact reference specified in (%s)" % unicode(str(record), 'utf8'),
+                civicrm.log("Contact not found! No valid contact reference specified in (%s)" % str(str(record), 'utf8'),
                     logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
                 continue
 
@@ -167,7 +167,7 @@ def import_contributions(civicrm, record_source, parameters=dict()):
                 update['payment_instrument_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('payment_instrument'), update['payment_instrument'])
             del update['payment_instrument']
         if 'payment_instrument_id' not in update or not update['payment_instrument_id']:
-            civicrm.log(u"Payment type ID not found! No valid payment type specified in (%s)" % unicode(str(record), 'utf8'),
+            civicrm.log("Payment type ID not found! No valid payment type specified in (%s)" % str(str(record), 'utf8'),
                 logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
             continue
 
@@ -176,7 +176,7 @@ def import_contributions(civicrm, record_source, parameters=dict()):
             if update['contribution_campaign']:
                 update['contribution_campaign_id'] = civicrm.getCampaignID(update['contribution_campaign'], attribute_key=campaign_identifier)
                 if not update['contribution_campaign_id']:
-                    civicrm.log(u"Campaign ID not found! No valid campaign specified in (%s)" % unicode(str(record), 'utf8'),
+                    civicrm.log("Campaign ID not found! No valid campaign specified in (%s)" % str(str(record), 'utf8'),
                         logging.WARN, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
             del update['contribution_campaign']
 
@@ -186,12 +186,12 @@ def import_contributions(civicrm, record_source, parameters=dict()):
                 update['contribution_status_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('contribution_status'), update['contribution_status'])
             del update['contribution_status']
         if 'contribution_status_id' not in update or not update['contribution_status_id']:
-            civicrm.log(u"Contribution status ID not found! No valid contribution status specified in (%s)" % unicode(str(record), 'utf8'),
+            civicrm.log("Contribution status ID not found! No valid contribution status specified in (%s)" % str(str(record), 'utf8'),
                 logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
             continue
 
         entity = civicrm.createOrUpdate(entity_type, update, update_mode, ['id', 'trxn_id'])
-        civicrm.log(u"Wrote contribution '%s'" % unicode(str(entity), 'utf8'),
+        civicrm.log("Wrote contribution '%s'" % str(str(entity), 'utf8'),
             logging.INFO, 'importer', 'import_contributions', 'Contribution', entity.get('id'), None, time.time()-timestamp)
 
 
@@ -222,10 +222,10 @@ def import_rcontributions(civicrm, record_source, parameters=dict()):
 
             if 'fallback_contact' in parameters:
                 update['contact_id'] = parameters['fallback_contact']
-                civicrm.log(u"Contact not found! Will be attributed to fallback contact %s" % str(parameters['fallback_contact']),
+                civicrm.log("Contact not found! Will be attributed to fallback contact %s" % str(parameters['fallback_contact']),
                     logging.INFO, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
             else:
-                civicrm.log(u"Contact not found! No valid contact reference specified in (%s)" % unicode(str(record), 'utf8'),
+                civicrm.log("Contact not found! No valid contact reference specified in (%s)" % str(str(record), 'utf8'),
                     logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
                 continue
 
@@ -235,7 +235,7 @@ def import_rcontributions(civicrm, record_source, parameters=dict()):
                 update['payment_instrument_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('payment_instrument'), update['payment_instrument'])
             del update['payment_instrument']
         if 'payment_instrument_id' not in update or not update['payment_instrument_id']:
-            civicrm.log(u"Payment type ID not found! No valid payment type specified in (%s)" % unicode(str(record), 'utf8'),
+            civicrm.log("Payment type ID not found! No valid payment type specified in (%s)" % str(str(record), 'utf8'),
                 logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
             continue
 
@@ -244,7 +244,7 @@ def import_rcontributions(civicrm, record_source, parameters=dict()):
             if update['contribution_campaign']:
                 update['contribution_campaign_id'] = civicrm.getCampaignID(update['contribution_campaign'], attribute_key=campaign_identifier)
                 if not update['contribution_campaign_id']:
-                    civicrm.log(u"Campaign ID not found! No valid campaign specified in (%s)" % unicode(str(record), 'utf8'),
+                    civicrm.log("Campaign ID not found! No valid campaign specified in (%s)" % str(str(record), 'utf8'),
                         logging.WARN, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
             del update['contribution_campaign']
 
@@ -254,12 +254,12 @@ def import_rcontributions(civicrm, record_source, parameters=dict()):
                 update['contribution_status_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('contribution_status'), update['contribution_status'])
             del update['contribution_status']
         if 'contribution_status_id' not in update or not update['contribution_status_id']:
-            civicrm.log(u"Contribution status ID not found! No valid contribution status specified in (%s)" % unicode(str(record), 'utf8'),
+            civicrm.log("Contribution status ID not found! No valid contribution status specified in (%s)" % str(str(record), 'utf8'),
                 logging.ERROR, 'importer', 'import_contributions', 'Contribution', None, None, time.time()-timestamp)
             continue
 
         entity = civicrm.createOrUpdate(entity_type, update, update_mode, identification)
-        civicrm.log(u"Wrote recurring contribution '%s'" % unicode(str(entity), 'utf8'),
+        civicrm.log("Wrote recurring contribution '%s'" % str(str(entity), 'utf8'),
             logging.INFO, 'importer', 'import_rcontributions', 'ContributionRecur', entity.get('id'), None, time.time()-timestamp)
 
 
@@ -283,7 +283,7 @@ def import_campaigns(civicrm, record_source, parameters=dict()):
                 update['campaign_type_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('campaign_type'), update['campaign_type'])
             del update['campaign_type']
         if 'campaign_type_id' not in update or not update['campaign_type_id']:
-            civicrm.log(u"Campaign type ID not identified! No valid campaign type specified in (%s)" % unicode(str(record), 'utf8'),
+            civicrm.log("Campaign type ID not identified! No valid campaign type specified in (%s)" % str(str(record), 'utf8'),
                 logging.ERROR, 'importer', 'import_campaigns', 'Campaign', None, None, time.time()-timestamp)
             continue
 
@@ -293,7 +293,7 @@ def import_campaigns(civicrm, record_source, parameters=dict()):
                 update['status_id'] = civicrm.getOptionValue(civicrm.getOptionGroupID('campaign_status'), update['status'])
             del update['status']
         if 'campaign_type_id' not in update or not update['campaign_type_id']:
-            civicrm.log(u"Campaign status ID not identified! No valid campaign status specified in (%s)" % unicode(str(record), 'utf8'),
+            civicrm.log("Campaign status ID not identified! No valid campaign status specified in (%s)" % str(str(record), 'utf8'),
                 logging.ERROR, 'importer', 'import_campaigns', 'Campaign', None, None, time.time()-timestamp)
             continue
 
@@ -301,7 +301,7 @@ def import_campaigns(civicrm, record_source, parameters=dict()):
             entity = civicrm.createOrUpdate(entity_type, update, update_mode, [parameters['id']])
         else:
             entity = civicrm.createOrUpdate(entity_type, update, update_mode)
-        civicrm.log(u"Wrote campaign '%s'" % unicode(str(entity), 'utf8'),
+        civicrm.log("Wrote campaign '%s'" % str(str(entity), 'utf8'),
             logging.INFO, 'importer', 'import_campaign', 'Campaign', entity.get('id'), None, time.time()-timestamp)
 
 
@@ -336,7 +336,7 @@ def import_notes(civicrm, record_source, parameters=dict()):
             entity_lookup_key = record['lookup_identifier_key']
             entity_lookup_value = record['lookup_identifier_value']
 
-            civicrm.log(u"Looking up a %s with %s='%s'" % (entity_type, entity_lookup_key, entity_lookup_value),
+            civicrm.log("Looking up a %s with %s='%s'" % (entity_type, entity_lookup_key, entity_lookup_value),
                 logging.INFO, 'importer', 'import_notes', 'Note', None, None, time.time()-timestamp)
             try:
                 entity = civicrm.getEntity(entity_type, {entity_lookup_key: entity_lookup_value}, primary_attributes=[entity_lookup_key])
@@ -344,7 +344,7 @@ def import_notes(civicrm, record_source, parameters=dict()):
                     record['entity_table'] = 'civicrm_' + entity_type.lower()
                     record['entity_id'] = entity.get('id')
                 else:
-                    civicrm.log(u"Couldn't find a %s with %s='%s'" % (entity_type, entity_lookup_key, entity_lookup_value),
+                    civicrm.log("Couldn't find a %s with %s='%s'" % (entity_type, entity_lookup_key, entity_lookup_value),
                         logging.ERROR, 'importer', 'import_notes', 'Note', None, Note, time.time()-timestamp)
             except:
                 pass
@@ -397,7 +397,7 @@ def import_contact_address(civicrm, record_source, parameters=dict()):
         timestamp = time.time()
         record['contact_id'] = civicrm.getContactID(record)
         if not record['contact_id']:
-            civicrm.log(u"Could not write contact address, contact not found for '%s'" % str(record),
+            civicrm.log("Could not write contact address, contact not found for '%s'" % str(record),
                 logging.WARN, 'importer', 'import_contact_address', 'Address', None, None, time.time()-timestamp)
             continue
 
@@ -420,17 +420,17 @@ def import_contact_address(civicrm, record_source, parameters=dict()):
                     logging.ERROR, 'importer', 'import_contact_address', 'Address', None, record['contact_id'], time.time()-timestamp)
             else:
                 if address:
-                    civicrm.log(u"Wrote contact address for '%s'" % unicode(str(address), 'utf8'),
+                    civicrm.log("Wrote contact address for '%s'" % str(str(address), 'utf8'),
                         logging.INFO, 'importer', 'import_contact_address', 'Address', address.get('id'), None, time.time()-timestamp)
                 else:
-                    civicrm.log(u"Contact-address already exists and was not updated for contact [%s]" % str(record['contact_id']),
+                    civicrm.log("Contact-address already exists and was not updated for contact [%s]" % str(record['contact_id']),
                         logging.INFO, 'importer', 'import_contact_address', 'Address', None, None, time.time()-timestamp)
         else:
             mode = parameters.get('update_mode', 'update')
             if mode in ['update', 'fill', 'replace']:
                 try:
                     address = civicrm.createOrUpdate('Address', record, update_type=mode, primary_attributes=['contact_id', 'location_type_id'])
-                    civicrm.log(u"Wrote contact address for '%s'" % unicode(str(address), 'utf8'),
+                    civicrm.log("Wrote contact address for '%s'" % str(str(address), 'utf8'),
                         logging.INFO, 'importer', 'import_contact_address', 'Address', address.get('id'), None, time.time()-timestamp)
                 except:
                     civicrm.logException("Exception while importing address for [%s]. Data was %s, exception: " % (record['contact_id'], str(record)),
@@ -458,7 +458,7 @@ def import_contact_base(civicrm, record_source, parameters=dict()):
     update_mode = parameters.get('update_mode', 'update')
     for record in record_source:
         entity = civicrm.createOrUpdate(entity_type, record, update_mode)
-        civicrm.log(u"Wrote base contact '%s'" % unicode(str(entity), 'utf8'),
+        civicrm.log("Wrote base contact '%s'" % str(str(entity), 'utf8'),
             logging.INFO, 'importer', 'import_contact_base', 'Contact', entity.get('id'), None, time.time()-timestamp)
 
 
@@ -487,27 +487,27 @@ def import_contact_with_dupe_check(civicrm, record_source, parameters=dict()):
             if len(result['ids']) == 1:
                 record['id'] = result['ids'][0]
                 entity = civicrm.createOrUpdate(entity_type, record, update_mode, ['id'])
-                civicrm.log(u"Duplicate found and updated: '%s'" % unicode(str(entity), 'utf8'),
+                civicrm.log("Duplicate found and updated: '%s'" % str(str(entity), 'utf8'),
                     logging.INFO, 'importer', 'import_contact_with_dupe_check', 'Contact', entity.get('id'), None, time.time()-timestamp)
             else:
-                civicrm.log(u"More than one duplicates found: {}".format(result['ids']),
+                civicrm.log("More than one duplicates found: {}".format(result['ids']),
                     logging.INFO, 'importer', 'import_contact_with_dupe_check', 'Contact', None, None, time.time()-timestamp)
 
         # there is already a contact with the given itendifiers (id or external_identifier)
         # we also update this contact...
         elif result['is_error'] == 1 and result['error_message'] == 'DB Error: already exists':
             entity = civicrm.createOrUpdate(entity_type, record, update_mode)
-            civicrm.log(u"Contact identified and updated: '%s'" % unicode(str(entity), 'utf8'),
+            civicrm.log("Contact identified and updated: '%s'" % str(str(entity), 'utf8'),
                 logging.INFO, 'importer', 'import_contact_with_dupe_check', 'Contact', entity.get('id'), None, time.time()-timestamp)
 
         # an unkown error occured
         elif result['is_error'] == 1:
-            civicrm.log(u"Error occured while trying to create a Contact. record: '{0}' | error_message: '{1}'".format(record, result.get('error_message', str())),
+            civicrm.log("Error occured while trying to create a Contact. record: '{0}' | error_message: '{1}'".format(record, result.get('error_message', str())),
                 logging.INFO, 'importer', 'import_contact_with_dupe_check', 'Contact', record.get('external_identifier'), None, time.time()-timestamp)
 
         # no matched or existing contact found; a new one was created
         else:
-            civicrm.log(u"Wrote base contact '{first_name} {last_name} [{id}]'".format(**result['values'][0]),
+            civicrm.log("Wrote base contact '{first_name} {last_name} [{id}]'".format(**result['values'][0]),
                 logging.INFO, 'importer', 'import_contact_base', 'Contact', result['id'], None, time.time()-timestamp)
 
 
@@ -529,7 +529,7 @@ def import_contact_website(civicrm, record_source, parameters=dict()):
         timestamp = time.time()
         record['contact_id'] = civicrm.getContactID(record)
         if not record['contact_id']:
-            civicrm.log(u"Could not write contact website, contact not found for '%s'" % str(record),
+            civicrm.log("Could not write contact website, contact not found for '%s'" % str(record),
                 logging.WARN, 'importer', 'import_contact_website', 'Website', None, None, time.time()-timestamp)
             continue
 
@@ -541,7 +541,7 @@ def import_contact_website(civicrm, record_source, parameters=dict()):
                 del record['website_type']
 
         if ('website_type_id' not in record):
-            civicrm.log(u"Could not write contact website, website type '%s' could not be resolved" % record.get('website_type', ''),
+            civicrm.log("Could not write contact website, website type '%s' could not be resolved" % record.get('website_type', ''),
                 logging.WARN, 'importer', 'import_contact_website', 'Website', None, None, time.time()-timestamp)
             continue
 
@@ -615,7 +615,7 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
         timestamp = time.time()
         record['contact_id'] = civicrm.getContactID(record)
         if not record['contact_id']:
-            civicrm.log(u"Could not write contact phone, contact not found for '%s'" % str(record),
+            civicrm.log("Could not write contact phone, contact not found for '%s'" % str(record),
                 logging.WARN, 'importer', 'import_contact_phone', 'Phone', None, None, time.time()-timestamp)
             continue
 
@@ -630,7 +630,7 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
                 record['location_type_id'] = civicrm.getLocationTypeID(location_type)
                 location_type_dict[location_type] = record['location_type_id']
             if not record['location_type_id']:
-                civicrm.log(u"Could not write contact phone number, location type %s could not be resolved" % location_type,
+                civicrm.log("Could not write contact phone number, location type %s could not be resolved" % location_type,
                     logging.WARN, 'importer', 'import_contact_phone', 'Phone', None, None, time.time()-timestamp)
                 continue
 
@@ -642,7 +642,7 @@ def import_contact_phone(civicrm, record_source, parameters=dict()):
             phone_type_id = civicrm.getOptionValue(option_group_id, phone_type)
 
             if not phone_type_id:
-                civicrm.log(u"Could not write contact phone number, phone type %s could not be resolved" % phone_type,
+                civicrm.log("Could not write contact phone number, phone type %s could not be resolved" % phone_type,
                     logging.WARN, 'importer', 'import_contact_phone', 'Phone', None, None, time.time()-timestamp)
                 continue
             else:
@@ -713,20 +713,20 @@ def import_contact_prefix(civicrm, record_source, parameters=dict()):
         timestamp = time.time()
         contact_id = civicrm.getContactID(record)
         if not contact_id:
-            civicrm.log(u"Could not find contact ID in record.",
+            civicrm.log("Could not find contact ID in record.",
               logging.WARN, 'importer', 'import_contact_prefix', 'Contact', None, None, time.time()-timestamp)
             continue
 
         contact = civicrm.getEntity('Contact', {'id': contact_id})
         if not contact:
-            civicrm.log(u"Could not find contact with external id '%s'" % record['external_identifier'],
+            civicrm.log("Could not find contact with external id '%s'" % record['external_identifier'],
               logging.WARN, 'importer', 'import_contact_prefix', 'Contact', None, None, time.time()-timestamp)
         else:
             if not record.get('prefix_id', None):
                 prefix = record.get('prefix', None)
                 prefix_id = civicrm.getOptionValue(civicrm.getOptionGroupID('individual_prefix'), prefix)
                 if not prefix_id:
-                    civicrm.log(u"Prefix '%s' doesn't exist!" % prefix,
+                    civicrm.log("Prefix '%s' doesn't exist!" % prefix,
                       logging.WARN, 'importer', 'import_contact_prefix', 'Contact', None, None, time.time()-timestamp)
                     continue
                 else:
@@ -738,13 +738,13 @@ def import_contact_prefix(civicrm, record_source, parameters=dict()):
             else:
                 changed = contact.update(record, True)
             if changed:
-                civicrm.log(u"Updated Prefix for '%s'" % unicode(str(contact), 'utf8'),
+                civicrm.log("Updated Prefix for '%s'" % str(str(contact), 'utf8'),
                   logging.INFO, 'importer', 'import_contact_prefix', 'Contact', contact.get('id'), None, time.time()-timestamp)
             elif no_update:
-                civicrm.log(u"Prefix for '%s' already exists and was not updated." % unicode(str(contact), 'utf8'),
+                civicrm.log("Prefix for '%s' already exists and was not updated." % str(str(contact), 'utf8'),
                   logging.INFO, 'importer', 'import_contact_prefix', 'Contact', contact.get('id'), None, time.time()-timestamp)
             else:
-                civicrm.log(u"Prefix for '%s' was up to date." % unicode(str(contact), 'utf8'),
+                civicrm.log("Prefix for '%s' was up to date." % str(str(contact), 'utf8'),
                   logging.INFO, 'importer', 'import_contact_prefix', 'Contact', contact.get('id'), None, time.time()-timestamp)
 
 
@@ -762,7 +762,7 @@ def import_contact_greeting(civicrm, record_source, parameters=dict()):
         timestamp = time.time()
         contact = civicrm.getEntity(entity_type.CONTACT, record)
         if not contact:
-            civicrm.log(u"Could not write contact greeting, contact not found for '%s'" % unicode(str(contact), 'utf8'),
+            civicrm.log("Could not write contact greeting, contact not found for '%s'" % str(str(contact), 'utf8'),
                 logging.WARN, 'importer', 'import_contact_greeting', 'Contact', None, None, time.time()-timestamp)
             continue
 
@@ -782,10 +782,10 @@ def import_contact_greeting(civicrm, record_source, parameters=dict()):
 
         changed = contact.update(update, True)
         if changed:
-            civicrm.log(u"Updated greeting settings for contact: %s" % unicode(str(contact), 'utf8'),
+            civicrm.log("Updated greeting settings for contact: %s" % str(str(contact), 'utf8'),
                 logging.INFO, 'importer', 'import_contact_greeting', 'Contact', contact.get('id'), None, time.time()-timestamp)
         else:
-            civicrm.log(u"Greeting settings not changed for contact: %s" % unicode(str(contact), 'utf8'),
+            civicrm.log("Greeting settings not changed for contact: %s" % str(str(contact), 'utf8'),
                 logging.INFO, 'importer', 'import_contact_greeting', 'Contact', contact.get('id'), None, time.time()-timestamp)
 
 
@@ -808,7 +808,7 @@ def import_contact_email(civicrm, record_source, parameters=dict()):
         timestamp = time.time()
         record['contact_id'] = civicrm.getContactID(record)
         if not record['contact_id']:
-            civicrm.log(u"Could not write contact email, contact not found for '%s'" % str(record),
+            civicrm.log("Could not write contact email, contact not found for '%s'" % str(record),
                 logging.WARN, 'importer', 'import_contact_email', 'Email', None, None, time.time()-timestamp)
             continue
 
@@ -823,7 +823,7 @@ def import_contact_email(civicrm, record_source, parameters=dict()):
                 record['location_type_id'] = civicrm.getLocationTypeID(location_type)
                 location_type_dict[location_type] = record['location_type_id']
             if not record['location_type_id']:
-                civicrm.log(u"Could not write contact email, location type %s could not be resolved" % location_type,
+                civicrm.log("Could not write contact email, location type %s could not be resolved" % location_type,
                     logging.WARN, 'importer', 'import_contact_email', 'Email', None, None, time.time()-timestamp)
                 continue
 
@@ -887,17 +887,17 @@ def import_membership(civicrm, record_source, parameters=dict()):
     and identification ('id', 'external_identifier', 'contact_id')
     """
     _prepare_parameters(parameters)
-    membership_primary_attributes=[u'contact_id']
+    membership_primary_attributes=['contact_id']
     if 'multiple' in parameters and parameters['multiple']:
         # multiple means, that we allow multiple membership types per contact
-        membership_primary_attributes.append(u'membership_type_id')
-        membership_primary_attributes.append(u'membership_type')
+        membership_primary_attributes.append('membership_type_id')
+        membership_primary_attributes.append('membership_type')
 
     for record in record_source:
         timestamp = time.time()
         record['contact_id'] = civicrm.getContactID(record)
         if not record['contact_id']:
-            civicrm.log(u"Could not write membership, contact not found for '%s'" % str(record),
+            civicrm.log("Could not write membership, contact not found for '%s'" % str(record),
                 logging.WARN, 'importer', 'import_membership', 'Membership', None, None, time.time()-timestamp)
             continue
 
@@ -905,7 +905,7 @@ def import_membership(civicrm, record_source, parameters=dict()):
         if 'status' in record:
             status_id = civicrm.getMembershipStatusID(record['status'])
             if not status_id:
-                civicrm.log(u"Membership status '%s' does not exist!" % record['status'],
+                civicrm.log("Membership status '%s' does not exist!" % record['status'],
                     logging.WARN, 'importer', 'import_membership', 'Membership', None, None, time.time()-timestamp)
                 continue
 
@@ -990,13 +990,13 @@ def import_entity_tags(civicrm, record_source, parameters=dict()):
 
     entity_type = parameters.get('entity_type', None)
     if not entity_type:
-        civicrm.log(u"Could not (un)tag entity, no entity_type given",
+        civicrm.log("Could not (un)tag entity, no entity_type given",
             logging.WARN, 'importer', 'import_entity_tags', 'EntityTag', None, None, time.time()-timestamp)
         return
 
     entity_table = parameters.get('entity_table', None)
     if not entity_table:
-        civicrm.log(u"Could not (un)tag entity, no entity_table given",
+        civicrm.log("Could not (un)tag entity, no entity_table given",
             logging.WARN, 'importer', 'import_entity_tags', 'EntityTag', None, None, time.time()-timestamp)
         return
 
@@ -1089,7 +1089,7 @@ def import_delete_entity(civicrm, record_source, parameters=dict()):
                     identifiers.remove(external_identifier)
                     identifiers.append('contact_id')
                 if not record['contact_id']:
-                    civicrm.log(u"Couldn't find or identify related contact!",
+                    civicrm.log("Couldn't find or identify related contact!",
                         logging.WARN, 'importer', 'import_delete_entity', entity_type, None, None, time.time()-timestamp)
                     continue
 
@@ -1115,10 +1115,10 @@ def import_delete_entity(civicrm, record_source, parameters=dict()):
 
         if entity:
             entity.delete()
-            civicrm.log(u"%s [%s] deleted." % (entity_type, entity.get('id')),
+            civicrm.log("%s [%s] deleted." % (entity_type, entity.get('id')),
                 logging.INFO, 'importer', 'import_delete_entity', entity_type, None, None, time.time()-timestamp)
         elif not silent:
-            civicrm.log(u"Couldn't find or identify entity to delete!",
+            civicrm.log("Couldn't find or identify entity to delete!",
                 logging.WARN, 'importer', 'import_delete_entity', entity_type, None, None, time.time()-timestamp)
 
 
@@ -1132,9 +1132,9 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
                 timestamp = time.time()
                 import_function(civicrm, [record], parameters)
             except:
-                civicrm.logException(u"Exception caught for '%s' on procedure '%s'. Exception was: " % (threading.currentThread().name, import_function.__name__),
+                civicrm.logException("Exception caught for '%s' on procedure '%s'. Exception was: " % (threading.currentThread().name, import_function.__name__),
                     logging.ERROR, 'importer', import_function.__name__, None, None, None, time.time()-timestamp)
-                civicrm.log(u"Failed record was: %s" % str(record),
+                civicrm.log("Failed record was: %s" % str(record),
                     logging.ERROR, 'importer', import_function.__name__, None, None, None, time.time()-timestamp)
         return
 
@@ -1189,9 +1189,9 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
                         timestamp = time.time()
                         self.function(self.civicrm, [record], self.parameters)
                     except:
-                        civicrm.logException(u"Exception caught for '%s' on procedure '%s'. Exception was: " % (threading.currentThread().name, import_function.__name__),
+                        civicrm.logException("Exception caught for '%s' on procedure '%s'. Exception was: " % (threading.currentThread().name, import_function.__name__),
                             logging.ERROR, 'importer', import_function.__name__, None, None, None, time.time()-timestamp)
-                        civicrm.log(u"Failed record was: %s" % str(record),
+                        civicrm.log("Failed record was: %s" % str(record),
                             logging.ERROR, 'importer', import_function.__name__, None, None, None, time.time()-timestamp)
 
 
@@ -1214,5 +1214,5 @@ def parallelize(civicrm, import_function, workers, record_source, parameters=dic
         if worker.isAlive():
             worker.join()
 
-    civicrm.log(u"Parallelized procedure '%s' completed." % import_function.__name__,
+    civicrm.log("Parallelized procedure '%s' completed." % import_function.__name__,
         logging.INFO, 'importer', 'parallelize', None, None, None, time.time()-timestamp)

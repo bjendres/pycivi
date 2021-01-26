@@ -39,7 +39,7 @@ class CiviEntity:
         self.attributes['id'] = entity_id
 
     def __str__(self):
-        return (u'%s entity [%d]' % (self.entity_type, self.getInt('id'))).encode('utf8')
+        return ('%s entity [%d]' % (self.entity_type, self.getInt('id'))).encode('utf8')
 
     def get(self, attribute_key, default_value=None):
         return self.attributes.get(attribute_key, default_value)
@@ -116,9 +116,9 @@ class CiviEntity:
 
         if changes:
             self._storeChanges(changes)
-            civi.log("Stored changes to '%s'" % unicode(str(self), 'utf8'), logging.INFO)
+            civi.log("Stored changes to '%s'" % str(str(self), 'utf8'), logging.INFO)
         else:
-            civi.log("No changes have been made, not storing '%s'" % unicode(str(self), 'utf8'), logging.INFO)
+            civi.log("No changes have been made, not storing '%s'" % str(str(self), 'utf8'), logging.INFO)
 
 
     def delete(self, final=True, civi=None):
@@ -133,7 +133,7 @@ class CiviTaggableEntity(CiviEntity):
 
 class CiviContactEntity(CiviTaggableEntity):
     def __str__(self):
-        return (u'%s [%s]' % (self.get('display_name'), self.get('id'))).encode('utf8')
+        return ('%s [%s]' % (self.get('display_name'), self.get('id'))).encode('utf8')
 
     def isType(self, type):
         """
@@ -177,7 +177,7 @@ class CiviContactEntity(CiviTaggableEntity):
         if current_type == 'Individual':
             if new_type == 'Organization':
                 # Conversion: Individual -> Organization
-                new_name = (self.get('first_name', '') + u' ' + self.get('last_name', '')).strip()
+                new_name = (self.get('first_name', '') + ' ' + self.get('last_name', '')).strip()
                 self.set('contact_type', 'Organization')
                 self.set('organization_name', new_name)
                 self.set('first_name', '')
@@ -253,17 +253,17 @@ class CiviContactEntity(CiviTaggableEntity):
 
 class CiviPhoneEntity(CiviEntity):
     def __str__(self):
-        return (u"%s:'%s'" % (self.get('phone_type', "#"), self.get('phone'))).encode('utf8')
+        return ("%s:'%s'" % (self.get('phone_type', "#"), self.get('phone'))).encode('utf8')
 
 
 class CiviCampaignEntity(CiviEntity):
     def __str__(self):
-        return (u"Campaign (%s): \"%s\"" % (self.get('id'), self.get('title'))).encode('utf8')
+        return ("Campaign (%s): \"%s\"" % (self.get('id'), self.get('title'))).encode('utf8')
 
 
 class CiviContributionEntity(CiviTaggableEntity):
     def __str__(self):
-        return (u'Contribution [%s]' % self.get('id')).encode('utf8')
+        return ('Contribution [%s]' % self.get('id')).encode('utf8')
 
     def _storeChanges(self, changed_attributes):
         if changed_attributes:

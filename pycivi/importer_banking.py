@@ -112,7 +112,7 @@ def import_bank_accounts(civicrm, record_source, parameters=dict()):
                 account = civicrm.createEntity('BankingAccount', account_data)
             else:
                 # update existing account (if present)
-                account = civicrm.createOrUpdate('BankingAccount', account_data, update_type='update', primary_attributes=[u'id', u'contact_id'])
+                account = civicrm.createOrUpdate('BankingAccount', account_data, update_type='update', primary_attributes=['id', 'contact_id'])
 
             # adjust timestamps, if necessary (they get set automatically to "now" on creation)
             timestamps = dict()
@@ -153,8 +153,8 @@ def import_bank_accounts(civicrm, record_source, parameters=dict()):
                 civicrm.log("Reference type ID for '%s' not found! Ignored." % key,
                     logging.WARN, 'importer_banking', 'import_bank_accounts', 'BankingAccountReference', None, None, 0)
                 continue
-            reference_data = {u'reference_type_id': reference_type_id, u'ba_id': account.get('id'), u'reference': refs[key]}
-            reference = civicrm.createOrUpdate('BankingAccountReference', reference_data, update_type='update', primary_attributes=[u'ba_id', u'reference_type_id'])
+            reference_data = {'reference_type_id': reference_type_id, 'ba_id': account.get('id'), 'reference': refs[key]}
+            reference = civicrm.createOrUpdate('BankingAccountReference', reference_data, update_type='update', primary_attributes=['ba_id', 'reference_type_id'])
             civicrm.log("Verified or added %s reference for bank account [%s]." % (key, account.get('id')),
                 logging.INFO, 'importer_banking', 'import_bank_accounts', 'BankingAccountReference', reference.get('id'), account.get('id'), 0)
 
@@ -329,7 +329,7 @@ def find_contributions_for_tx(civicrm, tx):
                     contribution_ids = suggestion['contribution_ids']
                     if isinstance(contribution_ids, list):
                         pass
-                    elif isinstance(contribution_ids, str) or isinstance(contribution_ids, unicode):
+                    elif isinstance(contribution_ids, str) or isinstance(contribution_ids, str):
                         contribution_ids = contribution_ids.split(',')
                     else:
                         raise Exception("Unexpected type in 'contribution_ids' entry: " + str(type(contribution_ids)))
