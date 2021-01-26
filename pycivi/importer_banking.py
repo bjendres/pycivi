@@ -176,9 +176,9 @@ def import_sepa_mandates(civicrm, record_source, parameters=dict()):
     The importer will create a recurring contribution, the (first) associated contribution and finally the mandate.
     In a last step, the mandate will be activated, if is_enabled==1
     """
-    mandate_keys = set(["invoice_id", "reference", "date", "creditor_id", "iban", "bic", "type", "creation_date", "validation_date"]) # "is_enabled", 
-    rcontrib_keys = set(["is_email_receipt", "payment_instrument_id", "financial_type_id", "payment_processor_id", "auto_renew", "failure_count", "cycle_day", "is_test", "contribution_status_id", "trxn_id", "contact_id", "amount", "currency", "frequency_unit", "frequency_interval", "installments", "start_date", "create_date", "modified_date"])
-    contrib_keys = set(["contact_id", "financial_type_id", "contribution_page_id", "payment_instrument_id", "total_amount", "non_deductible_amount", "fee_amount", "net_amount", "trxn_id", "invoice_id", "currency", "cancel_date", "cancel_reason", "receipt_date", "thankyou_date", "source", "amount_level", "honor_contact_id", "is_test", "is_pay_later", "honor_type_id", "address_id", "check_number", "campaign_id"]) # contribution_recur_id, contribution_status_id
+    mandate_keys = {"invoice_id", "reference", "date", "creditor_id", "iban", "bic", "type", "creation_date", "validation_date"} # "is_enabled"
+    rcontrib_keys = {"is_email_receipt", "payment_instrument_id", "financial_type_id", "payment_processor_id", "auto_renew", "failure_count", "cycle_day", "is_test", "contribution_status_id", "trxn_id", "contact_id", "amount", "currency", "frequency_unit", "frequency_interval", "installments", "start_date", "create_date", "modified_date"}
+    contrib_keys = {"contact_id", "financial_type_id", "contribution_page_id", "payment_instrument_id", "total_amount", "non_deductible_amount", "fee_amount", "net_amount", "trxn_id", "invoice_id", "currency", "cancel_date", "cancel_reason", "receipt_date", "thankyou_date", "source", "amount_level", "honor_contact_id", "is_test", "is_pay_later", "honor_type_id", "address_id", "check_number", "campaign_id"} # contribution_recur_id, contribution_status_id
 
     # perform some sanity checks
     if 'sepa_creditor_id' not in parameters:

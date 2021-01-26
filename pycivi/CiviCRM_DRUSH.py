@@ -54,7 +54,7 @@ class CiviCRM_DRUSH(CiviCRM):
         self.folder = os.path.expanduser(folder)
         self.drush_path = os.path.expanduser(drush_path)
         self.site = 'default'
-        self.non_parameters = set(['action', 'entity', 'key', 'api_key', 'sequential', 'json'])
+        self.non_parameters = {'action', 'entity', 'key', 'api_key', 'sequential', 'json'}
 
 
     def performAPICall(self, params=dict()):
