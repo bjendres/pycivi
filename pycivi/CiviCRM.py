@@ -215,7 +215,7 @@ class CiviCRM:
         entities = list()
         self.log("Entities found: %s" % result['count'],
             logging.DEBUG, 'pycivi', 'get', entity_type, first_key, None, time.time()-timestamp)
-        if type(result['values']) == dict:
+        if isinstance(result['values'], dict):
             for entity_id in result['values']:
                 entity = self._createEntity(entity_type, result['values'][entity_id])
                 entities.append(entity)
@@ -276,7 +276,7 @@ class CiviCRM:
                 result = self.performAPICall(query)
                 if result['is_error']:
                     raise CiviAPIException(result['error_message'])
-                if type(result['values'])==dict:
+                if isinstance(result['values'], dict):
                     return self._createEntity(entity_type, result['values'][str(result['id'])])
                 else:
                     return self._createEntity(entity_type, result['values'][0])
@@ -311,7 +311,7 @@ class CiviCRM:
             result = self.performAPICall(query)
             if result['is_error']:
                 raise CiviAPIException(result['error_message'])
-            if type(result['values'])==dict:
+            if isinstance(result['values'], dict):
                 return self._createEntity(entity_type, result['values'][str(result['id'])])
             else:
                 return self._createEntity(entity_type, result['values'][0])

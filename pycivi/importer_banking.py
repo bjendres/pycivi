@@ -327,9 +327,9 @@ def find_contributions_for_tx(civicrm, tx):
                 
                 if 'contribution_ids' in suggestion:
                     contribution_ids = suggestion['contribution_ids']
-                    if type(contribution_ids) == list:
+                    if isinstance(contribution_ids, list):
                         pass
-                    elif type(contribution_ids) == str or type(contribution_ids) == unicode:
+                    elif isinstance(contribution_ids, str) or isinstance(contribution_ids, unicode):
                         contribution_ids = contribution_ids.split(',')
                     else:
                         raise Exception("Unexpected type in 'contribution_ids' entry: " + str(type(contribution_ids)))
