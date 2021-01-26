@@ -58,7 +58,7 @@ if LooseVersion(requests.__version__) < LooseVersion('1.1.0'):
 class ApiCallRepeater(object):
     RETAKES = 0
     SLEEP = 0
-    CODES = range(500, 600)
+    CODES = list(range(500, 600))
 
     def __call__(self, method):
         def new_method(obj, *args, **kwargs):
