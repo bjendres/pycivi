@@ -104,7 +104,7 @@ def import_bank_accounts(civicrm, record_source, parameters=dict()):
         account_reference_data = dict()
         account_reference_data['reference'] = refs[account_reference_type]
         account_reference_data['reference_type_id'] = civicrm.getOptionValueID(civicrm.getOptionGroupID('civicrm_banking.reference_types'), account_reference_type)
-        account_reference = civicrm.getEntity('BankingAccountReference', account_reference_data, ['reference','reference_type_id'])
+        account_reference = civicrm.getEntity('BankingAccountReference', account_reference_data, ['reference', 'reference_type_id'])
 
         if not account_reference:
             if multiple_BAs:
@@ -125,7 +125,7 @@ def import_bank_accounts(civicrm, record_source, parameters=dict()):
                 logging.INFO, 'importer_banking', 'import_bank_accounts', 'BankingAccount', account.get('id'), account.get('contact_id'), 0)
         else:
             # update the found account
-            account = civicrm.getEntity('BankingAccount', {'id': account_reference.get('ba_id')}, primary_attributes=['id','contact_id'])
+            account = civicrm.getEntity('BankingAccount', {'id': account_reference.get('ba_id')}, primary_attributes=['id', 'contact_id'])
 
             # we found this account be this account reference, we don't have to check that again
             refs.pop(account_reference_type)

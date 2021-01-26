@@ -72,7 +72,7 @@ class CiviCRM_BRIDGED(CiviCRM):
         self.max_exec_time = 60
         self.bridge = None
         self.calls = dict()
-        self.call_base    = random.randint(1000000,9999999)
+        self.call_base    = random.randint(1000000, 9999999)
         self.call_counter = 1
 
         self.auth = None

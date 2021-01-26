@@ -156,7 +156,7 @@ class CiviCRM:
 
 
 
-    def getEntity(self, entity_type, attributes, primary_attributes=['id','external_identifier']):
+    def getEntity(self, entity_type, attributes, primary_attributes=['id', 'external_identifier']):
         timestamp = time.time()
 
         query = dict()
@@ -191,7 +191,7 @@ class CiviCRM:
             return None
 
 
-    def getEntities(self, entity_type, attributes, primary_attributes=['id','external_identifier']):
+    def getEntities(self, entity_type, attributes, primary_attributes=['id', 'external_identifier']):
         timestamp = time.time()
 
         query = dict()
@@ -1197,8 +1197,8 @@ class CiviCRM:
         # TODO: can it be safely replace by
         #    return self.getEntityTagIds(entity_id, 'civicrm_contact')
         query = { 'entity': 'EntityTag',
-                  'contact_id' : entity_id,
-                  'action' : 'get',
+                  'contact_id': entity_id,
+                  'action': 'get',
                   }
         result = self.performAPICall(query)
         if result['is_error']:
@@ -1215,9 +1215,9 @@ class CiviCRM:
 
     def getEntityTagIds(self, entity_id, entity_table):
         query = { 'entity':         'EntityTag',
-                  'entity_id' :     entity_id,
-                  'entity_table' :     entity_table,
-                  'action' :         'get',
+                  'entity_id':     entity_id,
+                  'entity_table':     entity_table,
+                  'action':         'get',
                   }
         result = self.performAPICall(query)
         if result['is_error']:
@@ -1234,8 +1234,8 @@ class CiviCRM:
 
     def getContactGroupIds(self, entity_id):
         query = { 'entity': 'GroupContact',
-                  'contact_id' : entity_id,
-                  'action' : 'get',
+                  'contact_id': entity_id,
+                  'action': 'get',
                   }
         result = self.performAPICall(query)
         count = result['count']
@@ -1252,8 +1252,8 @@ class CiviCRM:
         #    self.tagEntity(entity_id, 'cvicirm_contact', tag_id, value)
         timestamp = time.time()
         query = { 'entity': 'EntityTag',
-                  'contact_id' : entity_id,
-                  'tag_id' : tag_id,
+                  'contact_id': entity_id,
+                  'tag_id': tag_id,
                   }
         if value:
             query['action'] = 'create'
