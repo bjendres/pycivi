@@ -92,20 +92,23 @@ class CiviAPIException(Exception):
 
 class CiviCRM_REST(CiviCRM):
 
-    def __init__(self, url, site_key, user_key, logfile=None, options=dict()):
+    def __init__(self, url, site_key, user_key, logfile=None, htaccess=None,
+                 force_post=False, debug=False, verify_ssl=True, json_params=None):
         # init some attributes
-        CiviCRM.__init__(self, logfile)
+        super().__init__(logfile)
         self.url = url
         self.site_key = site_key
         self.user_key = user_key
-        self.auth = None
-        self.forcePost = False
-        self.headers = {}
-        self.json_parameters = False
+        self.forcePost = force_post
+        self.debug = debug
+        self.verify_ssl = verify_ssl
+        self.json_parameters = json_params
 
-        if 'auth_user' in options and 'auth_pass' in options:
-            from requests.auth import HTTPBasicAuth
-            self.auth = HTTPBasicAuth(options['auth_user'], options['auth_pass'])
+        self.headers = {}
+        self.auth = None
+
+        if htaccess and 'auth_user' in htaccess and 'auth_pass' in htaccess:
+            self.auth = HTTPBasicAuth(htaccess['auth_user'], htaccess['auth_pass'])
 
         # set rest url
         if self.url.endswith('extern/rest.php'):
@@ -148,9 +151,9 @@ class CiviCRM_REST(CiviCRM):
 
         forcePost = execParams.get('forcePost', False) or self.forcePost
         if (params['action'] in ['create', 'delete']) or forcePost:
-            reply = requests.post(self.rest_url, data=params, verify=True, auth=self.auth, headers=self.headers)
+            reply = requests.post(self.rest_url, data=params, verify=self.verify_ssl, auth=self.auth, headers=self.headers)
         else:
-            reply = requests.get(self.rest_url, params=params, verify=True, auth=self.auth, headers=self.headers)
+            reply = requests.get(self.rest_url, params=params, verify=self.verify_ssl, auth=self.auth, headers=self.headers)
 
         self.log("API call completed - status: %d, url: '%s'" % (reply.status_code, reply.url),
             logging.DEBUG, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
@@ -193,9 +196,9 @@ class CiviCRM_REST(CiviCRM):
             params['debug'] = 1
 
         if (params['action'] in ['create', 'delete']) or (execParams.get('forcePost', False)):
-            reply = requests.post(self.rest_url, data=params, verify=True, auth=self.auth)
+            reply = requests.post(self.rest_url, data=params, verify=self.verify_ssl, auth=self.auth)
         else:
-            reply = requests.get(self.rest_url, params=params, verify=True, auth=self.auth)
+            reply = requests.get(self.rest_url, params=params, verify=self.verify_ssl, auth=self.auth)
 
         self.log("API call completed - status: %d, url: '%s'" % (reply.status_code, reply.url),
             logging.DEBUG, 'API', params.get('action', "NO ACTION SET"), params.get('entity', "NO ENTITY SET!"), params.get('id', ''), params.get('external_identifier', ''), time.time()-timestamp)
