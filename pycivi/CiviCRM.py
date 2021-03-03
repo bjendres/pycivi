@@ -142,9 +142,10 @@ class CiviCRM:
         # check by calling get contact
         try:
             self.performAPICall({'entity':'Contact', 'action':'get', 'option.limit':1})
-            return True
         except:
             return False
+        else:
+            return True
 
 
     def load(self, entity_type, entity_id):

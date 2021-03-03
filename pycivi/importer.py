@@ -37,7 +37,6 @@ import logging
 import time
 import traceback
 import datetime
-import sha
 
 from .CiviCRM import CiviAPIException
 

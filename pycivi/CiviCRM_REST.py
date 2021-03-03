@@ -37,17 +37,13 @@ import time
 import threading
 import os
 import traceback
+import requests
 from distutils.version import LooseVersion
+from requests.auth import HTTPBasicAuth
 
 from .CiviEntity import *
 from .CiviCRM import CiviCRM
 
-try:
-    import requests
-except ImportError as err:
-    print("ERROR: Cannot import requests")
-    print(err)
-    sys.exit(1)
 
 if LooseVersion(requests.__version__) < LooseVersion('1.1.0'):
     print("ERROR: You need requests >= 1.1.0")
@@ -89,6 +85,7 @@ class CiviAPIException(Exception):
     def __init__(self, msg, code=None):
         self.msg = msg
         self.code = code
+
     def __str__(self):
         return self.msg
 
