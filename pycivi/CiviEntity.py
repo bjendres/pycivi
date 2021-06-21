@@ -39,7 +39,7 @@ class CiviEntity:
         self.attributes['id'] = entity_id
 
     def __str__(self):
-        return ('%s entity [%d]' % (self.entity_type, self.getInt('id'))).encode('utf8')
+        return '{} entity [{}]'.format(self.entity_type, self.getInt('id'))
 
     def get(self, attribute_key, default_value=None):
         return self.attributes.get(attribute_key, default_value)
@@ -133,7 +133,7 @@ class CiviTaggableEntity(CiviEntity):
 
 class CiviContactEntity(CiviTaggableEntity):
     def __str__(self):
-        return ('%s [%s]' % (self.get('display_name'), self.get('id'))).encode('utf8')
+        return '{} [{}]'.format(self.get('display_name'), self.get('id'))
 
     def isType(self, type):
         """
@@ -253,17 +253,17 @@ class CiviContactEntity(CiviTaggableEntity):
 
 class CiviPhoneEntity(CiviEntity):
     def __str__(self):
-        return ("%s:'%s'" % (self.get('phone_type', "#"), self.get('phone'))).encode('utf8')
+        return "%s:'%s'" % (self.get('phone_type', "#"), self.get('phone'))
 
 
 class CiviCampaignEntity(CiviEntity):
     def __str__(self):
-        return ("Campaign (%s): \"%s\"" % (self.get('id'), self.get('title'))).encode('utf8')
+        return "Campaign (%s): \"%s\"" % (self.get('id'), self.get('title'))
 
 
 class CiviContributionEntity(CiviTaggableEntity):
     def __str__(self):
-        return ('Contribution [%s]' % self.get('id')).encode('utf8')
+        return 'Contribution [%s]' % self.get('id')
 
     def _storeChanges(self, changed_attributes):
         if changed_attributes:
