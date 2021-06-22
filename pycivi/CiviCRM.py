@@ -682,6 +682,7 @@ class CiviCRM:
         """
         Get the ID for a given option group
         """
+        # FIXME: Is there a good reason to set group_id to 0? Such a value will lead to an api-error
         timestamp = time.time()
         if 'option_group' in self.lookup_cache and group_name in self.lookup_cache['option_group']:
             return self.lookup_cache['option_group'][group_name]
@@ -765,6 +766,7 @@ class CiviCRM:
         """
         Get the 'value' for a given option value
         """
+        # FIXME: Is there a good reason to set value to 0? Such a value will lead to an api-error.
         timestamp = time.time()
         if 'option_value' in self.lookup_cache and option_group_id in self.lookup_cache['option_value'] and name in self.lookup_cache['option_value'][option_group_id]:
             return self.lookup_cache['option_value'][option_group_id][name]
