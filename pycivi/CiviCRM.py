@@ -60,7 +60,7 @@ class CiviCRM:
         self._logger.setLevel(logging.DEBUG)
 
         # add the console logger
-        logger1 = logging.StreamHandler()
+        logger1 = logging.StreamHandler(sys.stdout)
         logger1.setLevel(logging.INFO)
         class MessageOnly(logging.Formatter):
             def format(self, record):
