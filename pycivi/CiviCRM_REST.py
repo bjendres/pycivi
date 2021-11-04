@@ -92,6 +92,18 @@ class CiviAPIException(Exception):
 
 class CiviCRM_REST(CiviCRM):
 
+    URL_PATHS = [
+        '/sites/all/modules/civicrm/extern/rest.php',
+        '/libraries/civicrm/extern/rest.php'
+    ]
+    API_ERROR_MSG = \
+        "The REST API is not reachable.\n" \
+        "We tried these endpoints: {urls}\n" \
+        "The error codes were: {codes}\n" \
+        "Please check your url configuration.\n" \
+        "Also try to set \"Extern URL Style\" to " \
+        "\"Prefer standalone scripts\" here: \"../civicrm/admin/setting/url\"."
+
     def __init__(self, url, site_key, user_key, logfile=None, htaccess=None,
                  force_post=False, debug=False, verify_ssl=True, json_params=None):
         # init some attributes
@@ -106,20 +118,41 @@ class CiviCRM_REST(CiviCRM):
 
         self.headers = {}
         self.auth = None
+        self.rest_url = None
 
         if htaccess and 'auth_user' in htaccess and 'auth_pass' in htaccess:
             self.auth = HTTPBasicAuth(htaccess['auth_user'], htaccess['auth_pass'])
 
         # set rest url
-        if self.url.endswith('extern/rest.php'):
+        if url.endswith('extern/rest.php'):
             # in this case it's fine, this is the rest URL
-            self.rest_url = self.url
+            self.rest_url = url
+            self.test_rest_api(self.rest_url)
         else:
-            if self.url.endswith('/civicrm'):
-                self.rest_url = self.url[:-8] + '/sites/all/modules/civicrm/extern/rest.php'
-            else:
-                self.rest_url = self.url + '/sites/all/modules/civicrm/extern/rest.php'
+            if url.endswith('/civicrm'):
+                url = url[:-8]
 
+            urls = list()
+            error_codes = list()
+            for path in self.URL_PATHS:
+                rest_url = url.rstrip('/') + path
+                try:
+                    self.test_rest_api(rest_url)
+                except CiviAPIException as exc:
+                    urls.append(rest_url)
+                    error_codes.append(exc.code)
+                else:
+                    self.rest_url = rest_url
+
+            if not self.rest_url:
+                msg = self.API_ERROR_MSG.format(urls=urls, codes=error_codes)
+                raise CiviAPIException(msg)
+
+    def test_rest_api(self, url):
+        reply = requests.get(url, verify=self.verify_ssl, auth=self.auth)
+        if not reply.status_code == 200:
+            msg = self.API_ERROR_MSG.format(urls=url, codes=reply.status_code)
+            raise CiviAPIException(msg, reply.status_code)
 
     @api_call_repeater
     def performAPICall(self, params=dict(), execParams=dict()):
@@ -182,7 +215,6 @@ class CiviCRM_REST(CiviCRM):
             raise CiviAPIException(result['error_message'])
         else:
             return result
-
 
     @api_call_repeater
     def performSimpleAPICall(self, params=dict(), execParams=dict()):
