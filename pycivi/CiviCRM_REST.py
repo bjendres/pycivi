@@ -97,10 +97,7 @@ class CiviCRM_REST(CiviCRM):
         '/libraries/civicrm/extern/rest.php'
     ]
     API_ERROR_MSG = \
-        "The REST API is not reachable.\n" \
-        "We tried these endpoints: {urls}\n" \
-        "The error codes were: {codes}\n" \
-        "Please check your url configuration.\n" \
+        "\n\nPlease check your url configuration.\n" \
         "Also try to set \"Extern URL Style\" to " \
         "\"Prefer standalone scripts\" here: \"../civicrm/admin/setting/url\"."
 
@@ -132,27 +129,36 @@ class CiviCRM_REST(CiviCRM):
             if url.endswith('/civicrm'):
                 url = url[:-8]
 
-            urls = list()
-            error_codes = list()
+            exceptions = list()
             for path in self.URL_PATHS:
                 rest_url = url.rstrip('/') + path
                 try:
                     self.test_rest_api(rest_url)
                 except CiviAPIException as exc:
-                    urls.append(rest_url)
-                    error_codes.append(exc.code)
+                    exceptions.append(exc)
                 else:
                     self.rest_url = rest_url
+                    break
 
             if not self.rest_url:
-                msg = self.API_ERROR_MSG.format(urls=urls, codes=error_codes)
+                msg = '\n\n'.join(e.msg for e in exceptions)
+                msg += self.API_ERROR_MSG
                 raise CiviAPIException(msg)
 
     def test_rest_api(self, url):
-        reply = requests.get(url, verify=self.verify_ssl, auth=self.auth)
-        if not reply.status_code == 200:
-            msg = self.API_ERROR_MSG.format(urls=url, codes=reply.status_code)
-            raise CiviAPIException(msg, reply.status_code)
+        msg = "The api is not reachable at: {}".format(url)
+        try:
+            reply = requests.get(url, verify=self.verify_ssl, auth=self.auth)
+        except Exception as exc:
+            msg += "\nAn error occured:"
+            msg += "\n{}: {}".format(type(exc).__name__, exc)
+            raise CiviAPIException(msg)
+        if reply.history:
+            msg += "\nWe were redirected to: {}".format(reply.history[-1].url)
+            raise CiviAPIException(msg)
+        elif not reply.status_code == 200:
+            msg += "\nError code was: {}".format(reply.status_code)
+            raise CiviAPIException(msg)
 
     @api_call_repeater
     def performAPICall(self, params=dict(), execParams=dict()):
