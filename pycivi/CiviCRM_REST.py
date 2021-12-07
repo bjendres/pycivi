@@ -202,7 +202,12 @@ class CiviCRM_REST(CiviCRM):
         elif reply.status_code != 200:
             raise CiviAPIException("HTML response code %d received, please check URL" % reply.status_code, reply.status_code)
 
-        result = json.loads(reply.text)
+        try:
+            result = json.loads(reply.text)
+        except json.decoder.JSONDecodeError as exc:
+            print('Unable to parse reply as json:')
+            print(reply.text)
+            raise exc
 
         # do some logging
         runtime = time.time()-timestamp
