@@ -94,7 +94,8 @@ class CiviCRM_REST(CiviCRM):
 
     URL_PATHS = [
         '/sites/all/modules/civicrm/extern/rest.php',
-        '/libraries/civicrm/extern/rest.php'
+        '/libraries/civicrm/extern/rest.php',
+        '/civicrm/ajax/rest',
     ]
     API_ERROR_MSG = \
         "\n\nPlease check your url configuration.\n" \
@@ -156,7 +157,7 @@ class CiviCRM_REST(CiviCRM):
         if reply.history:
             msg += "\nWe were redirected to: {}".format(reply.history[-1].url)
             raise CiviAPIException(msg)
-        elif not reply.status_code == 200:
+        elif not reply.status_code in [200, 403]:
             msg += "\nError code was: {}".format(reply.status_code)
             raise CiviAPIException(msg)
 
